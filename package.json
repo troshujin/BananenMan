@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "bot": "node src/Base/app.js",
+    "slash": "node src/Scripts/deploy-commands.js"
+  },
+  "type": "module",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.17.3",
+    "dotenv": "^16.4.5",
+    "fs": "^0.0.2",
+    "lodash.uniqwith": "^4.5.0",
+    "winston": "^3.15.0"
+  },
+  "engines": {
+    "node": ">=16.11.0"
+  }
+}
