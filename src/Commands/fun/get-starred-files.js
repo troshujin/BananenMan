@@ -76,8 +76,14 @@ export const commandBase = {
 		while (true) {
 			const timeSpent = (Date.now() - startTime) / 1000;
 
-			if (!hasReplied && timeSpent > 1.5) {
+			if (!hasReplied) {
 				await interaction.reply({
+					content: "Processing...", 
+					flags: "Ephemeral",
+				});
+				hasReplied = true;
+			} else if (timeSpent > 2) {
+				await interaction.editReply({
 					content: "Request is taking a bit long...", 
 					flags: "Ephemeral",
 				});
@@ -166,7 +172,5 @@ export const commandBase = {
 				await interaction.followUp({ content: msg, flags: "Ephemeral" });
 			}
 		}
-
-		console.log("Completed get-starred-files command.");
 	},
 };
