@@ -1,7 +1,6 @@
 import { Client, GatewayIntentBits, Partials } from "discord.js";
 import { readdirSync } from "node:fs";
 import config from "./config.js";
-import { fetchPokemon } from "../Lib/pokemon.js";
 
 class BaseClient {
   constructor(token) {

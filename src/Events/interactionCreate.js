@@ -17,6 +17,17 @@ export default {
       const focusedOption = interaction.options.getFocused(true); // returns { name, value }
       const query = focusedOption?.value ?? "";
 
+      if (focusedOption.name === "command") {
+        const allCommands = [...interaction.client.slashCommands.keys()];
+        const filtered = allCommands
+          .filter(f => f.toLowerCase().includes(query.toLowerCase()))
+          .slice(0, 25);
+
+        await interaction.respond(
+          filtered.map(f => ({ name: f, value: f }))
+        );
+      }
+
       if (focusedOption.name === "runname") {
         const files = await fs.readdir(config.soullinkDataDir);
         const choices = files.filter(f => f.endsWith(".json")).map(file => path.basename(file, ".json"));
@@ -57,7 +68,7 @@ export default {
           ) {
             return interaction.reply({
               content: "Only my **developers** can use this command.",
-              ephemeral: true,
+              flags: "Ephemeral",
             });
           }
 
@@ -72,7 +83,7 @@ export default {
                   content: `Cooldown is currently active, please try again <t:${Math.floor(
                     new Date(nowDate + waitedDate).getTime() / 1000
                   )}:R>.`,
-                  ephemeral: true,
+                  flags: "Ephemeral",
                 })
                 .then(() =>
                   setTimeout(
@@ -101,9 +112,8 @@ export default {
       } catch (e) {
         console.error(e);
         interaction.reply({
-          content:
-            "An error occurred while executing the command! Please try again.",
-          ephemeral: true,
+          content: "An error occurred while executing the command! Please try again.",
+          flags: "Ephemeral",
         });
       }
     }

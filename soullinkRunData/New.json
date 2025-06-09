@@ -6,8 +6,27 @@
       "username": "Trojo"
     }
   ],
-  "encounters": [],
-  "encounterCounter": 1,
+  "encounters": [
+    {
+      "id": 1,
+      "playerId": "196606443703631874",
+      "playerName": "Trojo",
+      "location": "Route 1",
+      "status": "box",
+      "reason": "",
+      "pokemon": "ivysaur",
+      "captured": true,
+      "nickname": "BUlba",
+      "pokemonHistory": [
+        {
+          "pokemon": "bulbasaur",
+          "location": "Route 1"
+        }
+      ],
+      "statusHistory": []
+    }
+  ],
+  "encounterCounter": 2,
   "started": true,
   "startedOn": 1749485928159
 }

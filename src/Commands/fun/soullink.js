@@ -6,6 +6,7 @@ import {
 import fs from "fs/promises";
 import path from "path";
 import config from '../../Base/config.js';
+import { getNextEvolution } from '../../Lib/pokemon.js';
 
 const SOULLINK = {
   NAME: "soullink",
@@ -156,7 +157,10 @@ export const commandBase = {
               opt.setName("location").setDescription("Location where the Pokémon has evolved").setRequired(true)
             )
             .addStringOption((opt) =>
-              opt.setName("pokemon").setDescription("The new Pokemon").setRequired(true)
+              opt
+                .setName("pokemon")
+                .setDescription("The new Pokemon")
+                .setRequired(false)
                 .setAutocomplete(true)
             )
         )
@@ -473,7 +477,7 @@ async function handleEvolveEncounter(interaction, run) {
   }
 
   const location = interaction.options.getString("location");
-  const newSpecies = interaction.options.getString("pokemon");
+  let newSpecies = interaction.options.getString("pokemon");
   const player = interaction.user.globalName;
 
   const encounter = run.encounters.find(
@@ -487,7 +491,7 @@ async function handleEvolveEncounter(interaction, run) {
           .setColor("Red")
           .setDescription(`❌ No encounter found for **${player}** on location **${location}**.`),
       ],
-      ephemeral: true,
+      flags: "Ephemeral",
     });
   }
 
@@ -496,6 +500,19 @@ async function handleEvolveEncounter(interaction, run) {
     pokemon: oldSpecies,
     location: location,
   })
+  if (!newSpecies) {
+    newSpecies = await getNextEvolution(oldSpecies);
+    if (!newSpecies) {
+      return await interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setDescription(`❌ Couldn't auto evolve **${oldSpecies}**. Please manually provide a pokemon.`),
+        ],
+        flags: "Ephemeral",
+      });
+    }
+  }
   encounter.pokemon = newSpecies;
 
   await saveRun(run.runname, run);
