@@ -1,0 +1,32 @@
+{
+  "runname": "aap",
+  "players": [
+    {
+      "id": "265535215059861514",
+      "username": "Piet323"
+    }
+  ],
+  "encounters": [
+    {
+      "id": 1,
+      "playerId": "265535215059861514",
+      "playerName": "Piet323",
+      "location": "Route 3",
+      "status": "box",
+      "reason": "",
+      "pokemon": "caterpiller",
+      "captured": true,
+      "nickname": "kut wurm",
+      "pokemonHistory": [
+        {
+          "pokemon": "caterpie",
+          "location": "Route 3"
+        }
+      ],
+      "statusHistory": []
+    }
+  ],
+  "encounterCounter": 2,
+  "started": true,
+  "startedOn": 1749486528971
+}

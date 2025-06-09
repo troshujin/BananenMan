@@ -18,3 +18,29 @@ If you find this project helpful, consider giving it a ⭐ on GitHub!
 ![Vote](https://user-images.githubusercontent.com/63320170/175336722-373eaf92-1454-4bce-b97c-e8a629c2628e.png)
 
 ### [Click here for the Discord.js V13 version.](https://github.com/memte/ExampleBot/tree/v13)
+
+
+## Commands 
+Start bot:
+
+```cmd
+pm2 start npm --name "discord-bot" -- run bot
+```
+
+View logs:
+
+```cmd
+pm2 logs
+```
+
+Restart:
+
+```cmd
+pm2 restart discord-bot
+```
+
+Stop:
+
+```cmd
+pm2 stop discord-bot
+```

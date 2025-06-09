@@ -1,7 +1,15 @@
 {
   "scripts": {
     "bot": "node src/Base/app.js",
-    "slash": "node src/Scripts/deploy-commands.js"
+    "run": "pm2 start src/Base/app.js --name discord-bot -i 1",
+    "stop": "pm2 stop discord-bot && pm2 delete discord-bot",
+    "logs": "pm2 logs",
+    "restart": "pm2 restart discord-bot",
+    "status": "pm2 status discord-bot",
+    "list": "pm2 list",
+    "monitor": "pm2 monit",
+    "reload": "pm2 reload discord-bot",
+    "save": "pm2 save"
   },
   "type": "module",
   "license": "MIT",
