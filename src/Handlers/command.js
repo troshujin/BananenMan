@@ -24,11 +24,11 @@ export default {
                 if (commands.commandBase.prefixData) {
                   // Prefix Command
                   const prefixCommand = commands.commandBase;
-                  console.log(prefixCommand.prefixData.name)
                   client.commands.set(
                     prefixCommand.prefixData.name,
                     prefixCommand
                   );
+                  console.log(`[CommandLoader] Loaded prefix command: ${prefixCommand.prefixData.name}`)
 
                   if (
                     prefixCommand.prefixData.aliases &&
@@ -52,6 +52,7 @@ export default {
                   slashCommand.slashData.name,
                   slashCommand
                 );
+                console.log(`[CommandLoader] Loaded slash command: ${slashCommand.slashData.name}`)
               }
             }
           })

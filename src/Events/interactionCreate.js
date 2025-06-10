@@ -3,6 +3,7 @@ import config from "../Base/config.js";
 import { pokemonNamesAsChoices } from "../Lib/pokemon.js";
 import fs from "fs/promises";
 import path from "path";
+import { loadRun } from "../Commands/fun/soullink.js";
 
 const cooldown = new Collection();
 
@@ -26,6 +27,41 @@ export default {
         await interaction.respond(
           filtered.map(f => ({ name: f, value: f }))
         );
+      }
+
+      if (focusedOption.name === "location") {
+        const runname = interaction.options.getString("runname")
+        if (runname) {
+          const run = await loadRun(runname)
+          if (run) {
+            const choices = [...new Set(run.encounters.map(e => e.location))];
+            const filtered = choices
+              .filter(f => f.toLowerCase().includes(query.toLowerCase()))
+              .slice(0, 25);
+  
+            await interaction.respond(
+              filtered.map(f => ({ name: f, value: f }))
+            );
+          }
+        }
+      }
+
+      if (focusedOption.name === "nickname") {
+        const runname = interaction.options.getString("runname")
+        if (runname) {
+          const run = await loadRun(runname)
+          if (run) {
+            const playerId = interaction.user.id;
+            const choices = [...new Set(run.encounters.filter(e => e.playerId == playerId).map(e => e.nickname))];
+            const filtered = choices
+              .filter(f => f.toLowerCase().includes(query.toLowerCase()))
+              .slice(0, 25);
+  
+            await interaction.respond(
+              filtered.map(f => ({ name: f, value: f }))
+            );
+          }
+        }
       }
 
       if (focusedOption.name === "runname") {

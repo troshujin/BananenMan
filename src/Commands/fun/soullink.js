@@ -7,13 +7,14 @@ import fs from "fs/promises";
 import path from "path";
 import config from '../../Base/config.js';
 import { getNextEvolution } from '../../Lib/pokemon.js';
+import { capitalize } from '../../Lib/utils.js';
 
 const SOULLINK = {
   NAME: "soullink",
   SUBCOMMAND_GROUPS: {
     RUN: "run",
     EDIT: "actions",
-    OVERVIEW: "overview",
+    INFO: "info",
   },
   RUN_SUBCOMMANDS: {
     CREATE: "create",
@@ -25,9 +26,11 @@ const SOULLINK = {
     MOVE: "move",
     EVOLVE: "evolve",
   },
-  OVERVIEW_SUBCOMMANDS: {
+  INFO_SUBCOMMANDS: {
     SHOW: "view",
     LIST: "all",
+    POKEMON: "pokemon",
+    ROUTE: "route",
   },
   MOVE_TO_TYPES: ["box", "team", "defeated"],
   ALL_TYPES: ["box", "team", "defeated", "missed"],
@@ -97,7 +100,11 @@ export const commandBase = {
                 .setAutocomplete(true)
             )
             .addStringOption((opt) =>
-              opt.setName("location").setDescription("Location info").setRequired(true)
+              opt
+                .setName("location")
+                .setDescription("Location info")
+                .setRequired(true)
+                .setAutocomplete(true)
             )
             .addStringOption((opt) =>
               opt
@@ -107,10 +114,16 @@ export const commandBase = {
                 .setAutocomplete(true)
             )
             .addBooleanOption((opt) =>
-              opt.setName("captured").setDescription("Captured or not").setRequired(true)
+              opt
+                .setName("captured")
+                .setDescription("Captured or not")
+                .setRequired(true)
             )
             .addStringOption((opt) =>
-              opt.setName("nickname").setDescription("Encounter nickname").setRequired(false)
+              opt
+                .setName("nickname")
+                .setDescription("Encounter nickname, required if captured.")
+                .setRequired(false)
             )
         )
         .addSubcommand((sub) =>
@@ -125,7 +138,18 @@ export const commandBase = {
                 .setAutocomplete(true)
             )
             .addStringOption((opt) =>
-              opt.setName("location").setDescription("The location where you caught this encounter.").setRequired(true)
+              opt
+                .setName("location")
+                .setDescription("The location where you moved the pokemon (where you are right now).")
+                .setRequired(true)
+                .setAutocomplete(true)
+            )
+            .addStringOption((opt) =>
+              opt
+                .setName("nickname")
+                .setDescription("The pokemon to be moved.")
+                .setRequired(true)
+                .setAutocomplete(true)
             )
             .addStringOption((opt) =>
               opt
@@ -139,7 +163,10 @@ export const commandBase = {
                 .setRequired(true)
             )
             .addStringOption((opt) =>
-              opt.setName("reason").setDescription("Reason for moving (for defeated)").setRequired(false)
+              opt
+                .setName("reason")
+                .setDescription("Reason for moving (required for defeated)")
+                .setRequired(false)
             )
         )
         .addSubcommand((sub) =>
@@ -154,7 +181,18 @@ export const commandBase = {
                 .setAutocomplete(true)
             )
             .addStringOption((opt) =>
-              opt.setName("location").setDescription("Location where the Pokémon has evolved").setRequired(true)
+              opt
+                .setName("location")
+                .setDescription("Location where the Pokémon has evolved")
+                .setRequired(true)
+                .setAutocomplete(true)
+            )
+            .addStringOption((opt) =>
+              opt
+                .setName("nickname")
+                .setDescription("The nickname of the pokemon you want to evolve")
+                .setRequired(true)
+                .setAutocomplete(true)
             )
             .addStringOption((opt) =>
               opt
@@ -167,11 +205,11 @@ export const commandBase = {
     )
     .addSubcommandGroup((group) =>
       group
-        .setName(SOULLINK.SUBCOMMAND_GROUPS.OVERVIEW)
+        .setName(SOULLINK.SUBCOMMAND_GROUPS.INFO)
         .setDescription("View run overview")
         .addSubcommand((sub) =>
           sub
-            .setName(SOULLINK.OVERVIEW_SUBCOMMANDS.SHOW)
+            .setName(SOULLINK.INFO_SUBCOMMANDS.SHOW)
             .setDescription("Show overview of a run")
             .addStringOption((opt) =>
               opt
@@ -194,8 +232,40 @@ export const commandBase = {
         )
         .addSubcommand((sub) =>
           sub
-            .setName(SOULLINK.OVERVIEW_SUBCOMMANDS.LIST)
+            .setName(SOULLINK.INFO_SUBCOMMANDS.LIST)
             .setDescription("List all soullink runs")
+        )
+        .addSubcommand(sub =>
+          sub
+            .setName(SOULLINK.INFO_SUBCOMMANDS.ROUTE)
+            .setDescription("View all encounters from a route")
+            .addStringOption((opt) =>
+              opt
+                .setName("runname")
+                .setDescription("Run name")
+                .setRequired(true)
+                .setAutocomplete(true)
+            )
+            .addStringOption(opt =>
+              opt
+                .setName("location")
+                .setDescription("The route/location").setRequired(true)
+            )
+        )
+        .addSubcommand(sub =>
+          sub
+            .setName(SOULLINK.INFO_SUBCOMMANDS.POKEMON)
+            .setDescription("Get info on a specific Pokémon")
+            .addStringOption((opt) =>
+              opt
+                .setName("runname")
+                .setDescription("Run name")
+                .setRequired(true)
+                .setAutocomplete(true)
+            )
+            .addStringOption(opt =>
+              opt.setName("nickname").setDescription("Pokémon nickname").setRequired(true)
+            )
         )
     ),
 
@@ -251,12 +321,18 @@ export const commandBase = {
 
       case SOULLINK.SUBCOMMAND_GROUPS.MOVE:
 
-      case SOULLINK.SUBCOMMAND_GROUPS.OVERVIEW:
-        if (sub === SOULLINK.OVERVIEW_SUBCOMMANDS.SHOW)
+      case SOULLINK.SUBCOMMAND_GROUPS.INFO:
+        if (sub === SOULLINK.INFO_SUBCOMMANDS.SHOW)
           return await handleOverview(interaction);
 
-        if (sub === SOULLINK.OVERVIEW_SUBCOMMANDS.LIST)
+        if (sub === SOULLINK.INFO_SUBCOMMANDS.LIST)
           return await handleListRuns(interaction);
+
+        if (sub === SOULLINK.INFO_SUBCOMMANDS.ROUTE)
+          return await handleViewRoute(interaction);
+
+        if (sub === SOULLINK.INFO_SUBCOMMANDS.POKEMON)
+          return await handleViewPokemon(interaction);
 
       default:
         const unknownEmbed = new EmbedBuilder()
@@ -275,15 +351,12 @@ export const commandBase = {
  */
 
 /**
- * @typedef {Object} pokemonHistory
- * @property {string} pokemon
+ * @typedef {Object} History
+ * @property {"pokemon" | "location"} type
+ * @property {string} oldValue
+ * @property {string} newValue
  * @property {string} location
- */
-
-/**
- * @typedef {Object} statusHistory
- * @property {string} status
- * @property {string} location
+ * @property {number} createdOn
  */
 
 /**
@@ -297,8 +370,7 @@ export const commandBase = {
  * @property {string} pokemon
  * @property {string} nickname
  * @property {boolean} captured
- * @property {pokemonHistory[]} pokemonHistory
- * @property {pokemonHistory[]} statusHistory
+ * @property {History[]} history
  */
 
 /**
@@ -310,7 +382,6 @@ export const commandBase = {
  * @property {Encounter[]} encounters
  * @property {number} encounterCounter
  */
-
 
 async function ensureDataDir() {
   try {
@@ -328,7 +399,7 @@ function getRunFilePath(runname) {
  * @param {string} runname
  * @returns {Promise<Run>}
  */
-async function loadRun(runname) {
+export async function loadRun(runname) {
   const file = getRunFilePath(runname);
   try {
     const data = await fs.readFile(file, "utf-8");
@@ -391,8 +462,7 @@ async function handleAddEncounter(interaction, run) {
     pokemon: pokemon,
     captured: captured,
     nickname: nickname,
-    pokemonHistory: [],
-    statusHistory: [],
+    history: [],
   }
 
   run.encounters.push(encounter);
@@ -444,9 +514,12 @@ async function handleMoveEncounter(interaction, run) {
   }
 
   for (const encounter of encounters) {
-    encounter.statusHistory.push({
-      status: encounter.status,
+    encounter.history.push({
+      type: "location",
+      oldValue: encounter.status,
+      newValue: to,
       location: location,
+      createdOn: Date.now()
     })
 
     encounter.status = to;
@@ -456,9 +529,9 @@ async function handleMoveEncounter(interaction, run) {
   await saveRun(run.runname, run);
 
   const successEmbed = new EmbedBuilder()
-    .setColor(to === "box" ? "Blue" : to === "team" ? "Red" : "Grey")
+    .setColor("Green")
     .setTitle("Encounter(s) Updated")
-    .setDescription(`✅ Moved ${encounters.length} encounter(s) at **${location}** to **${to}**${to === "defeated" && reason ? ` with reason: _${reason}_` : ""}.`)
+    .setDescription(`✅ Moved ${encounters.length} encounter(s) at **${location}** to **${capitalize(to)}**${to === "defeated" && reason ? ` with reason: _${reason}_` : ""}.`)
     .setTimestamp();
 
   return await interaction.reply({ embeds: [successEmbed] });
@@ -496,10 +569,6 @@ async function handleEvolveEncounter(interaction, run) {
   }
 
   const oldSpecies = encounter.pokemon;
-  encounter.pokemonHistory.push({
-    pokemon: oldSpecies,
-    location: location,
-  })
   if (!newSpecies) {
     newSpecies = await getNextEvolution(oldSpecies);
     if (!newSpecies) {
@@ -507,13 +576,20 @@ async function handleEvolveEncounter(interaction, run) {
         embeds: [
           new EmbedBuilder()
             .setColor("Red")
-            .setDescription(`❌ Couldn't auto evolve **${oldSpecies}**. Please manually provide a pokemon.`),
+            .setDescription(`❌ Couldn't auto evolve **${capitalize(oldSpecies)}**. Please manually provide a pokemon.`),
         ],
         flags: "Ephemeral",
       });
     }
   }
   encounter.pokemon = newSpecies;
+  encounter.history.push({
+    type: "pokemon",
+    oldValue: oldSpecies,
+    newValue: newSpecies,
+    location: location,
+    createdOn: Date.now(),
+  })
 
   await saveRun(run.runname, run);
 
@@ -522,7 +598,7 @@ async function handleEvolveEncounter(interaction, run) {
       new EmbedBuilder()
         .setColor("Green")
         .setTitle("✨ Evolution Successful")
-        .setDescription(`✅ **${oldSpecies}** has evolved into **${newSpecies}** for **${player}** on location **${location}**.`)
+        .setDescription(`✅ **${encounter.nickname}** (${capitalize(oldSpecies)}) has evolved into **${capitalize(newSpecies)}** for **${player}** on location **${location}**.`)
         .setTimestamp(),
     ],
   });
@@ -556,7 +632,7 @@ async function handleOverview(interaction) {
 
   if (encounters.length === 0) {
     return await interaction.reply({
-      embeds: [new EmbedBuilder().setColor("Yellow").setDescription(`ℹ️ No encounters found${filterType ? ` in **${filterType}**` : ""} for run **${runname}**.`)],
+      embeds: [new EmbedBuilder().setColor("Yellow").setDescription(`ℹ️ No encounters found${filterType ? ` in **${capitalize(filterType)}**` : ""} for run **${runname}**.`)],
     });
   }
 
@@ -663,7 +739,7 @@ async function handleOverview(interaction) {
           return;
         }
 
-        lines.push(`[ ${pkmn.nickname.padEnd(pkmnNickLen)} ${`(${pkmn.pokemon})`.padEnd(pkmnNameLen + 2)} ]`)
+        lines.push(`[ ${pkmn.nickname.padEnd(pkmnNickLen)} ${`(${capitalize(pkmn.pokemon)})`.padEnd(pkmnNameLen + 2)} ]`)
       });
 
       embed.addFields({
@@ -718,13 +794,15 @@ async function handleListRuns(interaction) {
 
 
     for (const run of runs) {
-      embed.addFields({
-        name: `${run.runname} - Started on ${(new Date(run.startedOn)).toLocaleDateString("en-US", {
+      const nameTxt = run.started
+        ? `${run.runname} - Started on ${(new Date(run.startedOn)).toLocaleDateString("en-US", {
           year: "numeric",
           month: "long",
           day: "numeric"
-        })
-          }`,
+        })}`
+        : `${run.runname} - Run has not started.`
+      embed.addFields({
+        name: nameTxt,
         value: `Players: ${run.players.map(p => p.username).join(", ")}`,
         inline: false,
       });
@@ -737,6 +815,113 @@ async function handleListRuns(interaction) {
       .setDescription(`❌ Error loading runs: ${err.message}`);
     return await interaction.reply({ embeds: [errorEmbed], flags: "Ephemeral" });
   }
+}
+
+/**
+ * @param {Encounter} encounter
+ * @returns {string}
+ */
+function formatEncounter(encounter) {
+  const {
+    location,
+    status,
+    reason,
+    playerId,
+    playerName,
+    pokemon,
+    nickname,
+    captured,
+    history } = encounter;
+
+  const lines = [];
+
+  lines.push(`${nickname} (${capitalize(pokemon)})`);
+  lines.push(``);
+  lines.push(`**History**`);
+  const emoji = { box: "📦", team: "🧢", defeated: "💀", missed: "❌" }
+
+  for (const hist of history) {
+    const date = new Date(hist.createdOn).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    })
+    const text = hist.type == "location"
+      ? `${emoji[hist.oldValue]} ➡️ ${emoji[hist.newValue]} Moved to ${capitalize(hist.newValue)} (${hist.location} on ${date})`
+      : `✨ ➡️ Evolved into ${capitalize(hist.newValue)} (${hist.location} on ${date})`
+    lines.push(text);
+  }
+
+
+  return lines.join("\n")
+}
+
+/**
+ * @param {CommandInteraction} interaction
+ */
+async function handleViewRoute(interaction) {
+  const runname = interaction.options.getString("runname");
+  const location = interaction.options.getString("location");
+
+  const run = await loadRun(runname);
+  if (!run) {
+    return await interaction.reply({
+      embeds: [new EmbedBuilder().setColor("Red").setDescription(`❌ Run '${runname}' not found.`)],
+      flags: "Ephemeral",
+    });
+  }
+
+  const routeEncounters = run.encounters.filter(e => e.location.toLowerCase() === location.toLowerCase());
+
+  if (routeEncounters.length === 0) {
+    return await interaction.reply({
+      embeds: [new EmbedBuilder().setColor("Yellow").setDescription(`ℹ️ No encounters found for run **${runname}**.`)],
+    });
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle(`🧭 Route Overview: ${location}`)
+    .setDescription(`${routeEncounters.length} encounter(s) found.`)
+    .setColor("Green");
+
+  for (const enc of routeEncounters) {
+    embed.addFields({
+      name: `${enc.playerName}'s Pokemon`,
+      value: formatEncounter(enc),
+      inline: true
+    });
+  }
+
+  return interaction.reply({ embeds: [embed] });
+}
+
+/**
+ * @param {CommandInteraction} interaction
+ */
+async function handleViewPokemon(interaction) {
+  const runname = interaction.options.getString("runname");
+  const nickname = interaction.options.getString("nickname");
+
+  const run = await loadRun(runname);
+  if (!run) {
+    return await interaction.reply({
+      embeds: [new EmbedBuilder().setColor("Red").setDescription(`❌ Run '${runname}' not found.`)],
+      flags: "Ephemeral",
+    });
+  }
+
+  const match = run.encounters.find(e => e.nickname?.toLowerCase() === nickname.toLowerCase());
+
+  if (!match) {
+    return interaction.reply({ content: `❌ No Pokémon found with nickname **${nickname}**.`, flags: "Ephemeral" });
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle(`🔍 Pokémon Overview: ${match.nickname}`)
+    .setColor("Blue")
+    .setDescription(formatEncounter(match));
+
+  return interaction.reply({ embeds: [embed] });
 }
 
 /**
@@ -764,7 +949,7 @@ async function handleCreateRun(interaction) {
   await saveRun(runname, run);
 
   return await interaction.reply({
-    embeds: [new EmbedBuilder().setColor("Green").setDescription(`✅ Run '${runname}' created.Others can now join.`)],
+    embeds: [new EmbedBuilder().setColor("Green").setDescription(`✅ Run '${runname}' created. Others can now join.`)],
   });
 }
 

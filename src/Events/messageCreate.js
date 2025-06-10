@@ -23,8 +23,6 @@ export default {
     const args = message.content.slice(prefix.length).trim().split(/ +/g);
     const cmd = args.shift().toLowerCase();
 
-    console.log(cmd)
-
     if (cmd.length === 0) {
       return;
     }
