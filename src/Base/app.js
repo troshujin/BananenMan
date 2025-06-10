@@ -4,12 +4,16 @@ import config from "./config.js";
 
 class BaseClient {
   constructor(token) {
+    this.createClient();
+    this.token = token;
+  }
+
+  createClient() {
     this.client = new Client({
       intents: Object.values(GatewayIntentBits),
       partials: Object.values(Partials),
       shards: "auto",
     });
-    this.token = token;
   }
 
   loadHandlers() {
@@ -20,12 +24,20 @@ class BaseClient {
     });
   }
 
-  start() {
+  async start() {
     this.loadHandlers();
-    this.client.login(this.token);
+    await this.client.login(this.token);
+  }
+
+  async reconnect() {
+    this.client.logger.info(`${this.client.user.username} RESTARTING!`);
+    await this.client.destroy();
+    this.createClient();
+    await this.start();
+    this.client.logger.info(`${this.client.user.username} RESTARTED!`);
   }
 }
 
 const token = config.token;
-const client = new BaseClient(token);
-client.start();
+export const botClient = new BaseClient(token);
+botClient.start();

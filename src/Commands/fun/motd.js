@@ -13,7 +13,10 @@ export const commandBase = {
     message.reply("Message");
   },
 
-
+  /**
+   * @param {import("discord.js").Client} client
+   * @param {import("discord.js").CommandInteraction} interaction
+   */
   async slashRun(client, interaction) {
     const settings = await getSettings();
     const motd = settings.motd || "No MOTD set.";

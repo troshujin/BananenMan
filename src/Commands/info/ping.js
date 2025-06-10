@@ -1,5 +1,6 @@
 import { EmbedBuilder, PermissionsBitField } from "discord.js";
 import { SlashCommandBuilder } from "@discordjs/builders";
+import globalState from "../../Base/state.js";
 
 export const commandBase = {
   prefixData: {
@@ -8,12 +9,12 @@ export const commandBase = {
   },
   slashData: new SlashCommandBuilder().setName("ping").setDescription("Pong!"),
   // If you want to improve the command, check the guide: https://discordjs.guide/slash-commands/advanced-creation.html
-  cooldown: 5000, // 1 second = 1000 ms / set to 0 if you don't want a cooldown.
+  cooldown: 0, // 1 second = 1000 ms / set to 0 if you don't want a cooldown.
   adminOnly: false, // Set to true if you want the command to be usable only by the developer.
   async prefixRun(client, message, args) {
-    message.reply("Pong 🏓, thijs is gay");
+    message.reply("Pong 🏓");
   },
   async slashRun(client, interaction) {
-    interaction.reply("Pong 🏓 2");
+    interaction.reply(`Pong 🏓`);
   },
 };

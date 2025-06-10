@@ -6,6 +6,7 @@ export default {
   name: Events.ClientReady,
   once: true,
   async execute(client) {
+    console.log("[Event] 'ready': Running.")
     const rest = new REST({ version: "10" }).setToken(client.token);
 
     client.user.presence.set({
