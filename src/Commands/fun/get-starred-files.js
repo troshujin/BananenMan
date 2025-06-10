@@ -26,7 +26,7 @@ export const commandBase = {
 		),
 
 	cooldown: 15000,
-	ownerOnly: false,
+	adminOnly: false,
 
 	async prefixRun(client, message, args) {
 		message.reply("Nah, I only do it with the slash command.");

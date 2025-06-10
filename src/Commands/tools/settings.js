@@ -1,16 +1,26 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
-import { getSettings, saveSettings } from "../../Lib/settings.js";
+import {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  userMention,
+  User,
+} from "discord.js";
+import { getSettings, saveSettings } from "../../Lib/files.js";
 
-const SETTINGS_LIST = {
-  MESSAGES: "messages",
-  _messages: {
-    MOTD: "motd"
+const SETTINGS = {
+  NAME: "settings",
+  SUBCOMMAND_GROUPS: {
+    GENERAL: "general",
+    ADMIN: "admin",
   },
-  GENERAL: "general",
-  _general: {
-    MAXCOUNT: "maxcount"
-  }
-}
+  GENERAL_SUBCOMMANDS: {
+    MOTD: "motd",
+  },
+  ADMIN_SUBCOMMANDS: {
+    ADD: "add",
+    REMOVE: "remove",
+    LIST: "list",
+  },
+};
 
 export const commandBase = {
   prefixData: {
@@ -18,84 +28,172 @@ export const commandBase = {
     aliases: [],
   },
   slashData: new SlashCommandBuilder()
-    .setName("settings")
+    .setName(SETTINGS.NAME)
     .setDescription("View or update bot settings.")
     .addSubcommandGroup(group =>
       group
-        .setName(SETTINGS_LIST.GENERAL)
-        .setDescription("General settings")
-        .addSubcommand(sub =>
-          sub
-            .setName(SETTINGS_LIST._general.MAXCOUNT)
-            .setDescription("Set the max count")
-            .addIntegerOption(option =>
-              option.setName("value").setDescription("New max count").setRequired(true)
-            )
-        )
-    )
-    .addSubcommandGroup(group =>
-      group
-        .setName(SETTINGS_LIST.MESSAGES)
+        .setName(SETTINGS.SUBCOMMAND_GROUPS.GENERAL)
         .setDescription("Message-related settings")
         .addSubcommand(sub =>
           sub
-            .setName(SETTINGS_LIST._messages.MOTD)
+            .setName(SETTINGS.GENERAL_SUBCOMMANDS.MOTD)
             .setDescription("Set the message of the day")
             .addStringOption(option =>
               option.setName("value").setDescription("New MOTD").setRequired(true)
             )
         )
+    )
+    .addSubcommandGroup(group =>
+      group
+        .setName(SETTINGS.SUBCOMMAND_GROUPS.ADMIN)
+        .setDescription("Admin management")
+        .addSubcommand(sub =>
+          sub
+            .setName(SETTINGS.ADMIN_SUBCOMMANDS.ADD)
+            .setDescription("Add an admin")
+            .addUserOption(option =>
+              option.setName("user").setDescription("User to add as admin").setRequired(true)
+            )
+        )
+        .addSubcommand(sub =>
+          sub
+            .setName(SETTINGS.ADMIN_SUBCOMMANDS.REMOVE)
+            .setDescription("Remove an admin")
+            .addUserOption(option =>
+              option.setName("user").setDescription("User to remove").setRequired(true)
+            )
+        )
+        .addSubcommand(sub =>
+          sub
+            .setName(SETTINGS.ADMIN_SUBCOMMANDS.LIST)
+            .setDescription("List all current admins")
+        )
     ),
 
-  // If you want to improve the command, check the guide: https://discordjs.guide/slash-commands/advanced-creation.html
-  cooldown: 5000, // 1 second = 1000 ms / set to 0 if you don't want a cooldown.
-  ownerOnly: true, // Set to true if you want the command to be usable only by the developer.
+  cooldown: 5000,
+  adminOnly: true,
+
   async prefixRun(client, message, args) {
     message.reply("Hi!");
   },
+
   async slashRun(client, interaction) {
-    const group = interaction.options.getSubcommandGroup(); // "general" or "messages"
+    const group = interaction.options.getSubcommandGroup();
+    const sub = interaction.options.getSubcommand();
 
     switch (group) {
-      case SETTINGS_LIST.GENERAL:
-        await handleGeneralSettings(interaction);
+      case SETTINGS.SUBCOMMAND_GROUPS.GENERAL:
+        if (sub === SETTINGS.GENERAL_SUBCOMMANDS.MOTD)
+          return await handleMOTD(interaction);
         break;
 
-      case SETTINGS_LIST.MESSAGES:
-        await handleMessagesSettings(interaction);
+      case SETTINGS.SUBCOMMAND_GROUPS.ADMIN:
+        if (sub === SETTINGS.ADMIN_SUBCOMMANDS.ADD)
+          return await handleAdminAdd(interaction);
+        if (sub === SETTINGS.ADMIN_SUBCOMMANDS.REMOVE)
+          return await handleAdminRemove(interaction);
+        if (sub === SETTINGS.ADMIN_SUBCOMMANDS.LIST)
+          return await handleAdminList(interaction);
         break;
-    
+
       default:
         break;
     }
   },
 };
 
-async function handleGeneralSettings(interaction) {
-  const subcommand = interaction.options.getSubcommand();
+/**
+ * @param {CommandInteraction} interaction
+ */
+async function handleMOTD(interaction) {
+  const value = interaction.options.getString("value");
+  const settings = await getSettings();
 
-  switch (subcommand) {
-    case SETTINGS_LIST._general.MAXCOUNT:
-      break;
-  
-    default:
-      break;
-  }
+  settings.motd = value;
+  await saveSettings(settings);
+
+  const embed = new EmbedBuilder()
+    .setColor("Green")
+    .setTitle("✅ MOTD Updated")
+    .setDescription(`Message of the Day set to: **${value}**`)
+    .setTimestamp();
+
+  await interaction.reply({ embeds: [embed] });
 }
 
-async function handleMessagesSettings(interaction) {
-  const subcommand = interaction.options.getSubcommand();
+/**
+ * @param {CommandInteraction} interaction
+ */
+async function handleAdminAdd(interaction) {
+  /** @type {import('discord.js').User} */
+  const user = interaction.options.getUser("user");
+  const settings = await getSettings();
 
-  switch (subcommand) {
-    case SETTINGS_LIST._messages.MOTD:
-      const value = interaction.options.getString("value");
-      const settings = getSettings();
-      settings.motd = value;
-      saveSettings(settings);
-      interaction.reply(`Successfully updated MOTD to ${value}`)
-      break;
-  
-    default:
-      break;
+  if (settings.admin.find(admin => admin.id === user.id)) {
+    return await interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setColor("Yellow")
+        .setTitle("ℹ️ Unable to add admin")
+        .setDescription(`⚠️ ${user.tag} is already an admin.`)],
+      flags: "Ephemeral",
+    });
   }
+
+  settings.admin.push(user);
+  await saveSettings(settings);
+
+  const embed = new EmbedBuilder()
+    .setColor("Green")
+    .setTitle("✅ Admin Added")
+    .setDescription(`${userMention(user.id)} has been added as an admin.`);
+
+  await interaction.reply({ embeds: [embed] });
+}
+
+/**
+ * @param {CommandInteraction} interaction
+ */
+async function handleAdminRemove(interaction) {
+  /** @type {User} */
+  const user = interaction.options.getUser("user");
+  const settings = await getSettings();
+
+  const index = settings.admin.findIndex(admin => admin.id === user.id);
+  if (index === -1) {
+    return await interaction.reply({
+      embeds: [new EmbedBuilder().setColor("Red").setDescription(`❌ ${user.tag} is not an admin.`)],
+      flags: "Ephemeral",
+    });
+  }
+
+  settings.admin.splice(index, 1);
+  await saveSettings(settings);
+
+  const embed = new EmbedBuilder()
+    .setColor("Red")
+    .setTitle("🗑️ Admin Removed")
+    .setDescription(`${userMention(user.id)} has been removed from admins.`);
+
+  await interaction.reply({ embeds: [embed] });
+}
+
+/**
+ * @param {CommandInteraction} interaction
+ */
+async function handleAdminList(interaction) {
+  const settings = await getSettings();
+
+  const embed = new EmbedBuilder()
+    .setColor("Blue")
+    .setTitle("👮 Admin List");
+
+  if (settings.admin.length === 0) {
+    embed.setDescription("No admins are currently set.");
+  } else {
+    embed.setDescription(
+      settings.admin.map(admin => `• ${userMention(admin.id)}`).join("\n")
+    );
+  }
+
+  await interaction.reply({ embeds: [embed] });
 }

@@ -84,7 +84,7 @@ export const commandBase = {
         });
       }
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({ embeds: [embed], flags: "Ephemeral" });
     }
 
     // Otherwise, list all commands
@@ -140,7 +140,7 @@ export const commandBase = {
     await interaction.reply({
       embeds: [generateEmbed(currentPage)],
       components: [getActionRow()],
-      ephemeral: true,
+      flags: "Ephemeral",
       // No need for type or withResponse here if you're going to create a collector on the interaction
       // If you needed the Message object for other reasons, you could use interaction.fetchReply() AFTER the reply
     });

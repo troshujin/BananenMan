@@ -1,9 +1,9 @@
-import { Collection, Events, InteractionType, ChatInputCommandInteraction } from "discord.js";
+import { Collection, Events, InteractionType, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
 import config from "../Base/config.js";
 import { pokemonNamesAsChoices } from "../Lib/pokemon.js";
 import fs from "fs/promises";
 import path from "path";
-import { loadRun } from "../Commands/fun/soullink.js";
+import { getSettings, loadRun } from "../Lib/files.js";
 
 const cooldown = new Collection();
 
@@ -38,7 +38,7 @@ export default {
             const filtered = choices
               .filter(f => f.toLowerCase().includes(query.toLowerCase()))
               .slice(0, 25);
-  
+
             await interaction.respond(
               filtered.map(f => ({ name: f, value: f }))
             );
@@ -56,7 +56,7 @@ export default {
             const filtered = choices
               .filter(f => f.toLowerCase().includes(query.toLowerCase()))
               .slice(0, 25);
-  
+
             await interaction.respond(
               filtered.map(f => ({ name: f, value: f }))
             );
@@ -98,14 +98,17 @@ export default {
       try {
         const command = client.slashCommands.get(interaction.commandName);
         if (command) {
-          if (
-            command.ownerOnly &&
-            !config.owners.includes(interaction.user.id)
-          ) {
-            return interaction.reply({
-              content: "Only my **developers** can use this command.",
-              flags: "Ephemeral",
-            });
+          if (command.adminOnly && !config.owners.includes(interaction.user.id)) {
+            const settings = await getSettings();
+
+            if (!settings.admin.find(a => a.id == interaction.user.id)) {
+              return await interaction.reply({
+                embeds: [new EmbedBuilder()
+                  .setTitle("Only **admins** can use this command.")
+                  .setTimestamp()],
+                flags: "Ephemeral",
+              });
+            }
           }
 
           if (command.cooldown) {

@@ -1,5 +1,5 @@
-import { SlashCommandBuilder } from "@discordjs/builders";
-import { getSettings, saveSettings } from "../../Lib/settings.js";
+import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
+import { getSettings } from "../../Lib/files.js";
 
 export const commandBase = {
   prefixData: {
@@ -8,16 +8,21 @@ export const commandBase = {
   },
   slashData: new SlashCommandBuilder().setName("motd").setDescription("Message Of The Day!"),
   cooldown: 1000,
-  ownerOnly: false,
+  adminOnly: false,
   async prefixRun(client, message, args) {
     message.reply("Message");
   },
 
 
   async slashRun(client, interaction) {
-    const settings = getSettings();
-
+    const settings = await getSettings();
     const motd = settings.motd || "No MOTD set.";
-    return await interaction.reply(`📢 MOTD: ${motd}`);
+
+    return await interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setTitle("MOTD")
+        .setDescription(motd)
+        .setTimestamp()]
+    });
   },
 };

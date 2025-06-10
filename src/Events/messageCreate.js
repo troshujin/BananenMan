@@ -1,5 +1,6 @@
-import { ChannelType, Collection, Events } from "discord.js";
+import { ChannelType, Collection, EmbedBuilder, Events } from "discord.js";
 import config from "../Base/config.js";
+import { getSettings } from "../Lib/files.js";
 const cooldown = new Collection();
 
 export default {
@@ -31,10 +32,17 @@ export default {
     command ||= client.commands.get(client.commandAliases.get(cmd));
 
     if (command) {
-      if (command.ownerOnly && !config.owners.includes(message.author.id)) {
-        return message.reply({
-          content: "Only my **developers** can use this command.",
-        });
+      if (command.adminOnly && !config.owners.includes(message.author.id)) {
+        const settings = await getSettings();
+
+        if (!settings.admin.find(a => a.id == message.author.id)) {
+          return await message.reply({
+            embeds: [new EmbedBuilder()
+              .setTitle("Only **admins** can use this command.")
+              .setTimestamp()],
+            flags: "Ephemeral",
+          });
+        }
       }
 
       if (command.cooldown) {
@@ -52,8 +60,8 @@ export default {
               setTimeout(
                 () => msg.delete(),
                 cooldown.get(`${command.name}-${message.author.id}`) -
-                  Date.now() +
-                  1000
+                Date.now() +
+                1000
               )
             );
         }

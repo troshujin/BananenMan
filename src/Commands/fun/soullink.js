@@ -3,11 +3,10 @@ import {
   CommandInteraction,
   EmbedBuilder,
 } from 'discord.js';
-import fs from "fs/promises";
 import path from "path";
-import config from '../../Base/config.js';
 import { getNextEvolution } from '../../Lib/pokemon.js';
 import { capitalize } from '../../Lib/utils.js';
+import { saveRun, loadRun } from '../../Lib/files.js';
 
 const SOULLINK = {
   NAME: "soullink",
@@ -270,7 +269,7 @@ export const commandBase = {
     ),
 
   cooldown: 1000,
-  ownerOnly: false,
+  adminOnly: false,
   async prefixRun(client, message, args) {
     message.reply("Use the slash command");
   },
@@ -344,76 +343,6 @@ export const commandBase = {
 };
 
 
-/**
- * @typedef {Object} Player
- * @property {string} id - Discord user ID
- * @property {string} username - Discord username
- */
-
-/**
- * @typedef {Object} History
- * @property {"pokemon" | "location"} type
- * @property {string} oldValue
- * @property {string} newValue
- * @property {string} location
- * @property {number} createdOn
- */
-
-/**
- * @typedef {Object} Encounter
- * @property {number} id
- * @property {string} location
- * @property {string} status
- * @property {string} [reason]
- * @property {string} playerId
- * @property {string} playerName
- * @property {string} pokemon
- * @property {string} nickname
- * @property {boolean} captured
- * @property {History[]} history
- */
-
-/**
- * @typedef {Object} Run
- * @property {string} runname
- * @property {boolean} started
- * @property {number} startedOn
- * @property {Player[]} players
- * @property {Encounter[]} encounters
- * @property {number} encounterCounter
- */
-
-async function ensureDataDir() {
-  try {
-    await fs.mkdir(config.soullinkDataDir, { recursive: true });
-  } catch {
-    // ignore errors
-  }
-}
-
-function getRunFilePath(runname) {
-  return path.join(config.soullinkDataDir, `${runname}.json`);
-}
-
-/**
- * @param {string} runname
- * @returns {Promise<Run>}
- */
-export async function loadRun(runname) {
-  const file = getRunFilePath(runname);
-  try {
-    const data = await fs.readFile(file, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return null;
-  }
-}
-
-async function saveRun(runname, data) {
-  await ensureDataDir();
-  const file = getRunFilePath(runname);
-  await fs.writeFile(file, JSON.stringify(data, null, 2));
-}
 
 /**
  * @param {CommandInteraction} interaction
