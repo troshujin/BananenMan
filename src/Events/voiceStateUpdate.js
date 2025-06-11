@@ -1,7 +1,7 @@
 import { Events } from 'discord.js';
 import globalState from "./../Base/state.js";
 
-const MUTE_LIMIT_MS = 1_200_000;
+const MUTE_LIMIT_MS = 20_000;
 const KEYS = {
   isRunning: "afkKickerIsRunning",
   functionKey: "afkKickerFunction",
@@ -102,6 +102,6 @@ function checkMutedUsers() {
       mutedUsers.delete(userId);
     }
   }
-  
+
   globalState.setState(KEYS.mutedUsers, mutedUsers);
 }

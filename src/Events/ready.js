@@ -1,7 +1,7 @@
 import { ActivityType, Events } from "discord.js";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v10";
-import globalState from "../Base/state";
+import globalState from "../Base/state.js";
 
 export default {
   name: Events.ClientReady,
