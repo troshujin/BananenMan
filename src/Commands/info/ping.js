@@ -15,6 +15,6 @@ export const commandBase = {
     message.reply("Pong 🏓");
   },
   async slashRun(client, interaction) {
-    interaction.reply(`Pong 🏓 wazaaa!`);
+    interaction.reply(`Pong 🏓`);
   },
 };
