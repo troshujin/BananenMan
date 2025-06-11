@@ -15,6 +15,7 @@ export const commandBase = {
         .setDescription("Set the amount of lines to be shown, defaults to 100")
         .setRequired(false)
     ),
+  adminOnly: true,
 
   /**
    * @param {import("discord.js").Client} client
@@ -37,7 +38,6 @@ export const commandBase = {
       });
     }
 
-    // Split logs into chunks of max 1900 characters
     const chunks = [];
     const lines = logsText.split("\n");
     let buffer = "";
@@ -51,12 +51,10 @@ export const commandBase = {
     }
     if (buffer) chunks.push(buffer);
 
-    // Send first chunk as initial reply
     await interaction.editReply({
       content: "```ansi\n" + chunks[0] + "```",
     });
 
-    // Follow up with additional chunks if needed
     for (let i = 1; i < chunks.length; i++) {
       await interaction.followUp({
         content: "```ansi\n" + chunks[i] + "```",
