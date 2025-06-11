@@ -2,7 +2,7 @@ import { EmbedBuilder, PermissionsBitField } from "discord.js";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import globalState from "../../Base/state.js";
 
-const myValue = "no";
+let myValue = "no";
 
 export const commandBase = {
   prefixData: {
