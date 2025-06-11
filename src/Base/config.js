@@ -16,3 +16,8 @@ export default {
     ]
   }
 };
+
+console.log(`[Config] ${process.env.BOT_TOKEN ? "Loaded BOT_TOKEN successfully" : "Was unable to load BOT_TOKEN"}`)
+console.log(`[Config] ${process.env.CLIENT_ID ? "Loaded CLIENT_ID successfully" : "Was unable to load CLIENT_ID"}`)
+console.log(`[Config] ${process.env.GITHUB_TOKEN ? "Loaded GITHUB_TOKEN successfully" : "Was unable to load GITHUB_TOKEN"}`)
+console.log(`[Config] ${process.env.GITHUB_USERNAME ? "Loaded GITHUB_USERNAME successfully" : "Was unable to load GITHUB_USERNAME"}`)

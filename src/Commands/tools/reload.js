@@ -10,7 +10,7 @@ export const commandBase = {
     name: "reload",
     aliases: [],
   },
-  slashData: new SlashCommandBuilder().setName("reload").setDescription("Disconnect and reconnect the bot. Refreshes commands and handlers without losing state."),
+  slashData: new SlashCommandBuilder().setName("reload").setDescription("Disconnect and reconnect the bot. Reloads commands, events and handlers without losing state."),
   cooldown: 1000,
   adminOnly: true,
 

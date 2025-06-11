@@ -44,3 +44,21 @@ Stop:
 ```cmd
 pm2 stop discord-bot
 ```
+
+### Less manual
+
+```cmd
+docker compose up [-d] [--build]
+
+docker compose down
+```
+
+or 
+
+```cmd
+docker build -t discord-bot .
+
+docker run --name discord-bot --env-file .env discord-bot [-d]
+
+docker stop discord-bot
+```
