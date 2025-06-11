@@ -1,4 +1,4 @@
-import { ActivityType, Events } from "discord.js";
+import { ActivityType, Events, Client } from "discord.js";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v10";
 import globalState from "../Base/state.js";
@@ -6,6 +6,10 @@ import globalState from "../Base/state.js";
 export default {
   name: Events.ClientReady,
   once: true,
+
+  /**
+   * @param {Client} client 
+   */
   async execute(client) {
     console.log("[Event] 'ready': Running.")
     const rest = new REST({ version: "10" }).setToken(client.token);
@@ -26,6 +30,7 @@ export default {
       console.error(error);
     }
 
-    globalState.getState("client", client);
+    console.log("[Event] Settings state.")
+    globalState.setState("client", client);
   },
 };

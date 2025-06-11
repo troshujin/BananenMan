@@ -2,8 +2,13 @@ class StateTracker {
   constructor() {
     this.states = new Map();
     /** @type {Map<string, Function>} */
-    this.minuteFunctions = new Map();
+    this.intervalFunctions = new Map();
     this.interval = undefined;
+    this.intervalMs = 20_000;
+  }
+
+  setIntervalMs(ms) {
+    this.intervalMs = ms;
   }
 
   setState(key, value) {
@@ -16,7 +21,7 @@ class StateTracker {
   }
 
   getState(key) {
-    this.states.get(key);
+    return this.states.get(key);
   }
 
   removeState(key) {
@@ -27,22 +32,37 @@ class StateTracker {
    * @param {string} key 
    * @param {Function} func 
    */
-  setMinuteFunction(key, func) {
-    this.minuteFunctions.set(key, func);
-    if (this.minuteFunctions.size === 1) {
+  setIntervalFunction(key, func) {
+    this.intervalFunctions.set(key, func);
+    if (!this.interval) {
       this.interval = setInterval(() => {
-        for (const [key, func] of this.minuteFunctions.entries()) {
+        if (this.intervalFunctions.size === 0) {
+          clearInterval(this.interval);
+          this.interval = undefined;
+          return;
+        }
+
+        console.log(`[IntervalFunctions] Running ${this.intervalFunctions.size} functions.`);
+
+        for (const [key, func] of this.intervalFunctions.entries()) {
+          console.log(`[IntervalFunctions] Running ${func.name}.`)
           func()
         }
-      }, 60_000);
+      }, this.intervalMs);
     }
   }
 
   /**
    * @param {string} key 
    */
-  removeMinuteFunction(key) {
-    this.minuteFunctions.delete(key);
+  removeIntervalFunction(key) {
+    this.intervalFunctions.delete(key);
+
+    if (this.intervalFunctions.size === 0) {
+      clearInterval(this.interval);
+      this.interval = undefined;
+      return;
+    }
   }
 }
 

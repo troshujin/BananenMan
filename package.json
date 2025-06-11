@@ -1,7 +1,7 @@
 {
   "scripts": {
     "bot": "node src/Base/app.js",
-    "run": "pm2 start src/Base/app.js --name discord-bot -i 1",
+    "run": "pm2 start src/Base/app.js --name discord-bot -i 1 --log-date-format=\"MM-DD HH:mm:ss\"",
     "stop": "pm2 stop discord-bot && pm2 delete discord-bot",
     "logs": "pm2 logs",
     "restart": "pm2 restart discord-bot",

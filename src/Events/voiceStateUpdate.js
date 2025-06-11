@@ -1,7 +1,7 @@
 import { Events } from 'discord.js';
 import globalState from "./../Base/state.js";
 
-const MUTE_LIMIT_MS = 20_000;
+const MUTE_LIMIT_MS = 1_200_000;
 const KEYS = {
   isRunning: "afkKickerIsRunning",
   functionKey: "afkKickerFunction",
@@ -49,11 +49,11 @@ export default {
     if (mutedUsers.size > 0 && (!hasActivated || !globalState.getState(KEYS.isRunning))) {
       hasActivated = true;
       globalState.setState(KEYS.isRunning, true);
-      globalState.setMinuteFunction(KEYS.functionKey, checkMutedUsers);
+      globalState.setIntervalFunction(KEYS.functionKey, checkMutedUsers);
     }
 
-    if (mutedUsers.size === 0 && globalState.interval) {
-      globalState.removeMinuteFunction(KEYS.functionKey);
+    if (mutedUsers.size === 0) {
+      globalState.removeIntervalFunction(KEYS.functionKey);
       globalState.setState(KEYS.isRunning, false);
       console.log("[AFK-Kicker] No more muted users.");
     } else {
@@ -68,17 +68,19 @@ function checkMutedUsers() {
   /** @type {Map<string, mutedUsers>} */
   const mutedUsers = globalState.getState(KEYS.mutedUsers);
 
+  console.log(client)
+
   if (!client) {
     console.log("[Afk-Kicker] Client not set, cancelling.");
     globalState.setState(KEYS.isRunning, false);
-    globalState.removeMinuteFunction(KEYS.functionKey);
+    globalState.removeIntervalFunction(KEYS.functionKey);
     return
   }
 
   if (!mutedUsers) {
     console.log("[AFK-Kicker] (Did run, but non found) No more muted users.");
     globalState.setState(KEYS.isRunning, false);
-    globalState.removeMinuteFunction(KEYS.functionKey);
+    globalState.removeIntervalFunction(KEYS.functionKey);
     return;
   }
 
