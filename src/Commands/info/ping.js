@@ -1,8 +1,4 @@
-import { EmbedBuilder, PermissionsBitField } from "discord.js";
 import { SlashCommandBuilder } from "@discordjs/builders";
-import globalState from "../../Base/state.js";
-
-let myValue = "no";
 
 export const commandBase = {
   prefixData: {
@@ -17,7 +13,6 @@ export const commandBase = {
     message.reply("Pong 🏓");
   },
   async slashRun(client, interaction) {
-    await interaction.reply(`Pong 🏓 ${myValue}`);
-    myValue += " yes"
+    await interaction.reply(`Pong 🏓`);
   },
 };

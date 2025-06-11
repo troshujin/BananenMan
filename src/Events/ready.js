@@ -1,6 +1,7 @@
 import { ActivityType, Events } from "discord.js";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v10";
+import globalState from "../Base/state";
 
 export default {
   name: Events.ClientReady,
@@ -16,7 +17,7 @@ export default {
     });
 
     client.logger.info(`${client.user.username} Active!`);
-    //
+
     try {
       await rest.put(Routes.applicationCommands(client.user.id), {
         body: client.slashDatas,
@@ -24,5 +25,7 @@ export default {
     } catch (error) {
       console.error(error);
     }
+
+    globalState.getState("client", client);
   },
 };

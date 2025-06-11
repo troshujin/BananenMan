@@ -1,30 +1,48 @@
 class StateTracker {
   constructor() {
-    this.selfMutedUsers = new Map();  // userId -> { channelId, mutedAt }
-    this.interval = null;
-    this.counter = 1;
+    this.states = new Map();
+    /** @type {Map<string, Function>} */
+    this.minuteFunctions = new Map();
+    this.interval = undefined;
   }
 
-  increment() {
-    return this.counter++;
+  setState(key, value) {
+    this.states.set(key, value);
   }
 
-  startInterval(client, afkCheckCallback, intervalMs = 30_000) {
-    if (this.interval) return;
-
-    this.interval = setInterval(() => {
-      afkCheckCallback(client, this.selfMutedUsers);
-      if (this.selfMutedUsers.size === 0) {
-        this.clearInterval();
-      }
-    }, intervalMs);
+  setStateIfNotSet(key, value) {
+    if (this.states.get(key)) return;
+    this.states.set(key, value);
   }
 
-  clearInterval() {
-    if (this.interval) {
-      clearInterval(this.interval);
-      this.interval = null;
+  getState(key) {
+    this.states.get(key);
+  }
+
+  removeState(key) {
+    this.states.delete(key);
+  }
+
+  /**
+   * @param {string} key 
+   * @param {Function} func 
+   */
+  setMinuteFunction(key, func) {
+    this.minuteFunctions.set(key, func);
+    if (this.minuteFunctions.size === 1) {
+      this.interval = setInterval(() => {
+        for (const [key, func] of this.minuteFunctions.entries()) {
+          func()
+        }
+      }, 60_000);
     }
+  }
+
+  /**
+   * @param {string} key 
+   */
+  removeMinuteFunction(key) {
+    this.minuteFunctions.delete(key);
   }
 }
 
