@@ -46,6 +46,11 @@ export function getFilePath(filename, folderPath = "") {
   return path.join(config.dataFolder, folderPath, `${filename}.json`);
 }
 
+export async function getRuns() {
+  const files = await fs.readdir(`${config.dataFolder}/${soullinkDataFolder}`);
+  return files.filter(f => f.endsWith(".json")).map(file => path.basename(file, ".json"));
+}
+
 /**
  * @param {string} runname
  * @returns {Promise<Run>}

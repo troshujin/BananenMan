@@ -415,7 +415,7 @@ export async function soullinkHandleButton(interaction) {
 async function handleAddEncounterButton(interaction) {
   const buttonMetaData = interaction.customId.split('_');
   const action = buttonMetaData[1];
-  
+
   const modal = new ModalBuilder()
     .setCustomId('add_encounter_modal')
     .setTitle('Add a New Encounter');
@@ -733,57 +733,105 @@ async function handleOverview(interaction) {
   /** @type {"box" | "team" | "defeated" | "missed"} */
   const statusesToShow = filterType ? [filterType] : SOULLINK.ALL_TYPES;
   const players = run.players.map(p => p.username);
+  const MAX_EMBED_FIELD_VALUE = 1024;
+  const MAX_EMBEDS_PER_MESSAGE = 10;
+  const MAX_TOTAL_MESSAGE_CHARS = 6000;
+
+  let currentEmbeds = [];
+  let currentCharCount = 0;
+
+  const sendEmbeds = async () => {
+    if (currentEmbeds.length > 0) {
+      await interaction.followUp({ embeds: currentEmbeds });
+      currentEmbeds = [];
+      currentCharCount = 0;
+    }
+  };
+
+  await interaction.reply({ embeds: [embeds[0]] }); // Header embed first
 
   for (const status of statusesToShow) {
-    /** @type {GroupedEncounter[]} */
     const locations = groupedByStatus[status];
     if (locations.length === 0) continue;
 
-    const embed = new EmbedBuilder()
+    let embed = new EmbedBuilder()
       .setTitle(titles[status])
-      .setColor(colors[status])
-    const lines = [];
+      .setColor(colors[status]);
 
-    players.forEach(player => {
-      lines.push(`[ ${player.padEnd(pkmnNameLen + pkmnNickLen + 3)} ]`)
-    });
+    const lines = players.map(player => `[ ${player.padEnd(pkmnNameLen + pkmnNickLen + 3)} ]`);
+    const playerHeader = `\`${lines.join(" - ")}\``;
 
-    embed.addFields({
-      name: `Players`,
-      value: `\`${lines.join(" - ")}\``,
-      inline: false,
-    });
+    embed.addFields({ name: `Players`, value: playerHeader });
+
+    let embedCharCount = playerHeader.length + titles[status].length;
 
     for (const locationGroup of locations) {
-      const lines = [];
-
-      players.forEach(player => {
+      const lines = players.map(player => {
         const pkmn = locationGroup.encounters.find(enc => enc.player == player);
+        if (!pkmn) return `[ ${'Pokemon not found.'.padEnd(pkmnNameLen + pkmnNickLen + 3)} ]`;
+        return `[ ${pkmn.nickname.padEnd(pkmnNickLen)} ${`(${capitalize(pkmn.pokemon)})`.padEnd(pkmnNameLen + 2)} ]`;
+      });
 
-        if (!pkmn) {
-          lines.push(`[ ${'Pokemon not found.'.padEnd(pkmnNameLen + pkmnNickLen + 3)} ]`)
-          return;
+      const locationTitle = `📍 ${locationGroup.location}${locationGroup.status === "defeated" ? ` - ${locationGroup.reason}` : ''}`;
+      const valueText = `\`${lines.join(" - ")}\``;
+
+      if (valueText.length > MAX_EMBED_FIELD_VALUE) {
+        // Split valueText into chunks
+        const chunks = [];
+        let temp = '';
+        for (const line of lines) {
+          const chunkLine = `[ ${line} ] - `;
+          if ((temp + chunkLine).length > MAX_EMBED_FIELD_VALUE) {
+            chunks.push(temp);
+            temp = chunkLine;
+          } else {
+            temp += chunkLine;
+          }
         }
+        if (temp) chunks.push(temp);
 
-        lines.push(`[ ${pkmn.nickname.padEnd(pkmnNickLen)} ${`(${capitalize(pkmn.pokemon)})`.padEnd(pkmnNameLen + 2)} ]`)
-      });
+        for (let i = 0; i < chunks.length; i++) {
+          embed.addFields({
+            name: i === 0 ? locationTitle : `${locationTitle} (cont.)`,
+            value: `\`${chunks[i]}\``
+          });
+          embedCharCount += chunks[i].length;
+        }
+      } else {
+        embed.addFields({
+          name: locationTitle,
+          value: valueText
+        });
+        embedCharCount += valueText.length;
+      }
 
-      embed.addFields({
-        name: `📍 ${locationGroup.location}${locationGroup.status === "defeated" ? ` - ${locationGroup.reason}` : ''}`,
-        value: `\`${lines.join(" - ")}\``,
-        inline: false,
-      });
+      // If embed gets too large, push and start new
+      if (embedCharCount > MAX_TOTAL_MESSAGE_CHARS || embed.data.fields.length >= 25) {
+        currentEmbeds.push(embed);
+        embed = new EmbedBuilder().setColor(colors[status]);
+        embedCharCount = 0;
+
+        if (currentEmbeds.length === MAX_EMBEDS_PER_MESSAGE) {
+          await sendEmbeds();
+        }
+      }
     }
 
-    embeds.push(embed)
+    currentEmbeds.push(embed);
+    if (currentEmbeds.length === MAX_EMBEDS_PER_MESSAGE) {
+      await sendEmbeds();
+    }
   }
 
-  embeds.push(new EmbedBuilder()
-    .setColor("DarkGold")
-    .setTimestamp()
-    .setFooter({ text: "Soullink overview powered by your BananenMan" }));
+  // Final footer embed
+  currentEmbeds.push(
+    new EmbedBuilder()
+      .setColor("DarkGold")
+      .setTimestamp()
+      .setFooter({ text: "Soullink overview powered by your BananenMan" })
+  );
 
-  return await interaction.reply({ embeds: embeds });
+  await sendEmbeds();
 }
 
 /**
