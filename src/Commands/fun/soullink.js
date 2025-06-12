@@ -2,6 +2,12 @@ import {
   SlashCommandBuilder,
   CommandInteraction,
   EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } from 'discord.js';
 import path from "path";
 import { getNextEvolution } from '../../Lib/pokemon.js';
@@ -14,6 +20,7 @@ const SOULLINK = {
     RUN: "run",
     EDIT: "actions",
     INFO: "info",
+    UI: "ui",
   },
   RUN_SUBCOMMANDS: {
     CREATE: "create",
@@ -82,6 +89,11 @@ export const commandBase = {
                 .setAutocomplete(true)
             )
         )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName(SOULLINK.SUBCOMMAND_GROUPS.UI)
+        .setDescription("Open an interactive UI to apply all actions.")
     )
     .addSubcommandGroup((group) =>
       group
@@ -281,13 +293,6 @@ export const commandBase = {
     const group = interaction.options.getSubcommandGroup(false);
     const sub = interaction.options.getSubcommand();
 
-    if (!group) {
-      const errorEmbed = new EmbedBuilder()
-        .setColor("Red")
-        .setDescription("❌ Please specify a subcommand group.");
-      return await interaction.reply({ embeds: [errorEmbed], flags: "Ephemeral" });
-    }
-
     switch (group) {
       case SOULLINK.SUBCOMMAND_GROUPS.RUN:
         if (sub === SOULLINK.RUN_SUBCOMMANDS.START) {
@@ -334,6 +339,10 @@ export const commandBase = {
           return await handleViewPokemon(interaction);
 
       default:
+        if (sub === SOULLINK.SUBCOMMAND_GROUPS.UI) {
+          return await handleUI(interaction)
+        }
+
         const unknownEmbed = new EmbedBuilder()
           .setColor("Red")
           .setDescription("❌ Unknown command group or subcommand.");
@@ -343,6 +352,93 @@ export const commandBase = {
 };
 
 
+/**
+ * @param {CommandInteraction} interaction
+ */
+async function handleUI(interaction) {
+  const runName = "Hello";
+  const userId = interaction.user.id;
+
+  // Fake data — in real use, you'd pull from a DB
+  const fakePlayerData = {
+    team: ['Charmander', 'Pidgey', 'Rattata'],
+  };
+
+  const embed = new EmbedBuilder()
+    .setTitle(`Your Team in "${runName}"`)
+    .setDescription(fakePlayerData.team.join('\n'))
+    .setColor(0x00AE86);
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`soullink_${SOULLINK.EDIT_SUBCOMMANDS.ADD}_${runName}`)
+      .setLabel('Add Encounter')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`soullink_${SOULLINK.EDIT_SUBCOMMANDS.MOVE}_${runName}`)
+      .setLabel('Move Pokémon')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`soullink_${SOULLINK.EDIT_SUBCOMMANDS.EVOLVE}_${runName}`)
+      .setLabel('Evolve Pokémon')
+      .setStyle(ButtonStyle.Success)
+  );
+
+  await interaction.reply({ embeds: [embed], components: [row], flags: "Ephemeral" });
+}
+
+/**
+ * @param {CommandInteraction} interaction
+ */
+export async function soullinkHandleButton(interaction) {
+  const buttonMetaData = interaction.customId.split('_');
+  const action = buttonMetaData[1];
+
+  switch (action) {
+    case SOULLINK.EDIT_SUBCOMMANDS.ADD:
+      return await handleAddEncounterButton(interaction);
+
+    case SOULLINK.EDIT_SUBCOMMANDS.MOVE:
+      return;
+
+    case SOULLINK.EDIT_SUBCOMMANDS.EVOLVE:
+      return;
+
+    default:
+      break;
+  }
+}
+
+/**
+ * @param {CommandInteraction} interaction
+ */
+async function handleAddEncounterButton(interaction) {
+  const buttonMetaData = interaction.customId.split('_');
+  const action = buttonMetaData[1];
+  
+  const modal = new ModalBuilder()
+    .setCustomId('add_encounter_modal')
+    .setTitle('Add a New Encounter');
+
+  const pokemonName = new TextInputBuilder()
+    .setCustomId('pokemon_name')
+    .setLabel('Pokémon Name')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true);
+
+  const location = new TextInputBuilder()
+    .setCustomId('location')
+    .setLabel('Encounter Location')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true);
+
+  const row1 = new ActionRowBuilder().addComponents(pokemonName);
+  const row2 = new ActionRowBuilder().addComponents(location);
+
+  modal.addComponents(row1, row2);
+
+  await interaction.showModal(modal);
+}
 
 /**
  * @param {CommandInteraction} interaction
@@ -479,11 +575,12 @@ async function handleEvolveEncounter(interaction, run) {
   }
 
   const location = interaction.options.getString("location");
+  const nickname = interaction.options.getString("nickname");
   let newSpecies = interaction.options.getString("pokemon");
   const player = interaction.user.globalName;
 
   const encounter = run.encounters.find(
-    (e) => e.location === location && e.playerId === interaction.user.id
+    (e) => e.nickname === nickname && e.playerId === interaction.user.id
   );
 
   if (!encounter) {

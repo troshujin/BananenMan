@@ -11,7 +11,7 @@ export async function fetchAllPokemon() {
 }
 
 /**
- * @returns {{name: string, value: string}[]}
+ * @returns {Promise<{name: string, value: string}[]>}
  */
 export async function pokemonNamesAsChoices() {
   const list = await fetchAllPokemon();
