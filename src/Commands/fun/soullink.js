@@ -714,7 +714,14 @@ async function handleOverview(interaction) {
     if (encounters.length == 0) continue;
 
     // Generate image buffer
-    const imageBuffer = await generateBoxImageFromGroups(encounters);
+    let imageBuffer;
+    try {
+      imageBuffer = await generateBoxImageFromGroups(encounters);
+    } catch (error) {
+      await interaction.editReply({
+        content: error
+      });
+    }
 
     // Create attachment
     const attachment = new AttachmentBuilder(imageBuffer, { name: `img${tempId}.png` });
