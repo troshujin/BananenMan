@@ -3,7 +3,8 @@ import config from "../Base/config.js";
 import { pokemonNamesAsChoices } from "../Lib/pokemon.js";
 import fs from "fs/promises";
 import path from "path";
-import { getSettings, loadRun } from "../Lib/files.js";
+import { getRuns, getSettings, loadRun } from "../Lib/files.js";
+import { soullinkHandleButton } from "../Commands/fun/soullink.js";
 
 const cooldown = new Collection();
 
@@ -15,78 +16,10 @@ export default {
    */
   async execute(interaction) {
     if (interaction.isAutocomplete()) {
-      const focusedOption = interaction.options.getFocused(true); // returns { name, value }
-      const query = focusedOption?.value ?? "";
-
-      if (focusedOption.name === "command") {
-        const allCommands = [...interaction.client.slashCommands.keys()];
-        const filtered = allCommands
-          .filter(f => f.toLowerCase().includes(query.toLowerCase()))
-          .slice(0, 25);
-
-        await interaction.respond(
-          filtered.map(f => ({ name: f, value: f }))
-        );
-      }
-
-      if (focusedOption.name === "location") {
-        const runname = interaction.options.getString("runname")
-        if (runname) {
-          const run = await loadRun(runname)
-          if (run) {
-            const choices = [...new Set(run.encounters.map(e => e.location))];
-            const filtered = choices
-              .filter(f => f.toLowerCase().includes(query.toLowerCase()))
-              .slice(0, 25);
-
-            await interaction.respond(
-              filtered.map(f => ({ name: f, value: f }))
-            );
-          }
-        }
-      }
-
-      if (focusedOption.name === "nickname") {
-        const runname = interaction.options.getString("runname")
-        if (runname) {
-          const run = await loadRun(runname)
-          if (run) {
-            const playerId = interaction.user.id;
-            const choices = [...new Set(run.encounters.filter(e => e.playerId == playerId).map(e => e.nickname))];
-            const filtered = choices
-              .filter(f => f.toLowerCase().includes(query.toLowerCase()))
-              .slice(0, 25);
-
-            await interaction.respond(
-              filtered.map(f => ({ name: f, value: f }))
-            );
-          }
-        }
-      }
-
-      if (focusedOption.name === "runname") {
-        const files = await fs.readdir(config.soullinkDataDir);
-        const choices = files.filter(f => f.endsWith(".json")).map(file => path.basename(file, ".json"));
-
-        const filtered = choices
-          .filter(f => f.toLowerCase().includes(query.toLowerCase()))
-          .slice(0, 25);
-
-        await interaction.respond(
-          filtered.map(f => ({ name: f, value: f }))
-        );
-      }
-
-      if (focusedOption.name === "pokemon") {
-        const choices = await pokemonNamesAsChoices();
-        const filtered = choices
-          .filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
-          .slice(0, 25);
-
-        await interaction.respond(
-          filtered.map(p => ({ name: p.name, value: p.name }))
-        );
-      }
+      await handleAutoComplete(interaction);
+    }
+    if (interaction.isButton()) {
+      await handleButton(interaction);
     }
 
     const { client } = interaction;
@@ -158,3 +91,94 @@ export default {
     }
   },
 };
+
+/**
+ * @param {ChatInputCommandInteraction} interaction
+ */
+async function handleAutoComplete(interaction) {
+  const focusedOption = interaction.options.getFocused(true); // returns { name, value }
+  const query = focusedOption?.value ?? "";
+
+  if (focusedOption.name === "command") {
+    const allCommands = [...interaction.client.slashCommands.keys()];
+    const filtered = allCommands
+      .filter(f => f.toLowerCase().includes(query.toLowerCase()))
+      .slice(0, 25);
+
+    await interaction.respond(
+      filtered.map(f => ({ name: f, value: f }))
+    );
+  }
+
+  if (focusedOption.name === "location") {
+    const runname = interaction.options.getString("runname")
+    if (runname) {
+      const run = await loadRun(runname)
+      if (run) {
+        const choices = [...new Set(run.encounters.map(e => e.location))];
+        const filtered = choices
+          .filter(f => f.toLowerCase().includes(query.toLowerCase()))
+          .slice(0, 25);
+
+        await interaction.respond(
+          filtered.map(f => ({ name: f, value: f }))
+        );
+      }
+    }
+  }
+
+  if (focusedOption.name === "nickname") {
+    const runname = interaction.options.getString("runname")
+    if (runname) {
+      const run = await loadRun(runname)
+      if (run) {
+        const playerId = interaction.user.id;
+        const choices = [...new Set(run.encounters.filter(e => e.playerId == playerId).map(e => e.nickname))];
+        const filtered = choices
+          .filter(f => f.toLowerCase().includes(query.toLowerCase()))
+          .slice(0, 25);
+
+        await interaction.respond(
+          filtered.map(f => ({ name: f, value: f }))
+        );
+      }
+    }
+  }
+
+  if (focusedOption.name === "runname") {
+    const choices = await getRuns();
+
+    const filtered = choices
+      .filter(f => f.toLowerCase().includes(query.toLowerCase()))
+      .slice(0, 25);
+
+    await interaction.respond(
+      filtered.map(f => ({ name: f, value: f }))
+    );
+  }
+
+  if (focusedOption.name === "pokemon") {
+    const choices = await pokemonNamesAsChoices();
+    const filtered = choices
+      .filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
+      .slice(0, 25);
+
+    await interaction.respond(
+      filtered.map(p => ({ name: p.name, value: p.name }))
+    );
+  }
+}
+
+/**
+ * @param {ChatInputCommandInteraction} interaction
+ */
+async function handleButton(interaction) {
+  const buttonMetaData = interaction.customId.split('_');
+
+  switch (buttonMetaData[0]) {
+    case 'soullink':
+      return await soullinkHandleButton(interaction);
+
+    // You can also re-use the previous embed and just modify its description if needed.
+  }
+}

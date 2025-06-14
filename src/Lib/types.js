@@ -45,3 +45,54 @@
  * @property {string} motd
  * @property {User[]} admin
  */
+
+/**
+ * @typedef {Object} SimpleEncounter
+ * @property {string} id
+ * @property {string} player
+ * @property {string} pokemon
+ * @property {boolean} captured
+ */
+
+/**
+ * @typedef {Object} GroupedEncounter
+ * @property {string} location
+ * @property {string} nickname
+ * @property {string} status
+ * @property {string} [reason]
+ * @property {SimpleEncounter[]} encounters
+ */
+
+/**
+ * @typedef {Object} PokemonTypeSlot
+ * @property {number} slot
+ * @property {{ name: string, url: string }} type
+ * 
+ */
+
+/**
+ * @typedef {Object} PokemonSprites
+ * @property {string|null} front_default
+ * @property {string|null} front_shiny 
+ * @property {string|null} front_female 
+ * @property {string|null} front_shiny_female
+ * @property {string|null} back_default
+ * @property {string|null} back_shiny 
+ */
+
+/**
+ * @typedef {Object} Pokemon
+ * @property {number} id
+ * @property {string} name
+ * @property {PokemonTypeSlot[]} types
+ * @property {PokemonSprites} sprites 
+ * @property {number} height
+ * @property {number} weight
+ * @property {{ base_stat: number, stat: { name: string } }[]} stats
+ */
+
+/**
+ * @typedef {Object} PokemonBulk
+ * @property {string} name
+ * @property {string} url
+ */

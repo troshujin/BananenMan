@@ -8,11 +8,13 @@ import {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
+  AttachmentBuilder,
 } from 'discord.js';
 import path from "path";
 import { getNextEvolution } from '../../Lib/pokemon.js';
 import { capitalize } from '../../Lib/utils.js';
 import { saveRun, loadRun } from '../../Lib/files.js';
+import { generateBoxImageFromGroups } from '../../Lib/image.js';
 
 const SOULLINK = {
   NAME: "soullink",
@@ -662,176 +664,75 @@ async function handleOverview(interaction) {
     });
   }
 
-  /**
-   * @typedef {Object} SimpleEncounter
-   * @property {string} id
-   * @property {string} player
-   * @property {string} pokemon
-   * @property {boolean} captured
-   * @property {string} [nickname]
-   */
+  await interaction.deferReply();
 
-  /**
-   * @typedef {Object} GroupedEncounter
-   * @property {string} location
-   * @property {string} status
-   * @property {string} [reason]
-   * @property {SimpleEncounter[]} encounters
-   */
-
-  /** @type {{ [key: string]: GroupedEncounter }} */
   const groupedByLocation = {};
   for (const e of encounters) {
-    if (groupedByLocation[e.location]) {
-      groupedByLocation[e.location].encounters.push({
-        id: e.id,
-        player: e.playerName,
-        pokemon: e.pokemon,
-        captured: e.captured,
-        nickname: e.nickname
-      })
-      continue;
+    if (!groupedByLocation[e.location]) {
+      groupedByLocation[e.location] = {
+        location: e.location,
+        status: e.status,
+        reason: e.reason,
+        nickname: e.nickname,
+        encounters: [],
+      };
     }
-
-    const encounter = {
-      location: e.location,
-      status: e.status,
-      reason: e.reason,
-      encounters: [
-        {
-          id: e.id,
-          player: e.playerName,
-          pokemon: e.pokemon,
-          captured: e.captured,
-          nickname: e.nickname
-        }
-      ],
-
-    }
-    groupedByLocation[e.location] = encounter;
+    groupedByLocation[e.location].encounters.push({
+      id: e.id,
+      player: e.playerName,
+      pokemon: e.pokemon,
+      captured: e.captured,
+    });
   }
 
-  // Format output nicely
-  /** @type {{ box: GroupedEncounter[], team: GroupedEncounter[], defeated: GroupedEncounter[], missed: GroupedEncounter[], }} */
+  const titles = {
+    box: "📦 Pokémon in the box",
+    team: "🧢 Pokémon on the team",
+    defeated: "💀 Defeated Pokémon",
+    missed: "❌ Missed encounters",
+  };
+  const colors = {
+    box: "Blue",
+    team: "Red",
+    defeated: "Grey",
+    missed: "DarkerGrey",
+  };
+  const statusesToShow = filterType ? [filterType] : SOULLINK.ALL_TYPES;
   const groupedByStatus = { box: [], team: [], defeated: [], missed: [] };
-  for (const [_, e] of Object.entries(groupedByLocation)) {
+  for (const e of Object.values(groupedByLocation)) {
     groupedByStatus[e.status].push(e);
   }
 
-  const pkmnNameLen = Math.max(...run.encounters.map(enc => enc.pokemon.length));
-  const pkmnNickLen = Math.max(...run.encounters.map(enc => enc.nickname.length));
-
-  const titles = { box: "📦 Pokémon in the box", team: "🧢 Pokemon on the team", defeated: "💀 Defeated Pokémon", missed: "❌ Missed encounters" }
-  const colors = { box: "Blue", team: "Red", defeated: "Grey", missed: "DarkerGrey" }
   const embeds = [];
+  const attachments = [];
 
-  // Build embed(s)
-  embeds.push(new EmbedBuilder()
-    .setTitle(`📜 Soullink Overview: ${runname}`)
-    .setColor("DarkGold"));
-
-  /** @type {"box" | "team" | "defeated" | "missed"} */
-  const statusesToShow = filterType ? [filterType] : SOULLINK.ALL_TYPES;
-  const players = run.players.map(p => p.username);
-  const MAX_EMBED_FIELD_VALUE = 1024;
-  const MAX_EMBEDS_PER_MESSAGE = 10;
-  const MAX_TOTAL_MESSAGE_CHARS = 6000;
-
-  let currentEmbeds = [];
-  let currentCharCount = 0;
-
-  const sendEmbeds = async () => {
-    if (currentEmbeds.length > 0) {
-      await interaction.followUp({ embeds: currentEmbeds });
-      currentEmbeds = [];
-      currentCharCount = 0;
-    }
-  };
-
-  await interaction.reply({ embeds: [embeds[0]] }); // Header embed first
-
+  let id = 1;
   for (const status of statusesToShow) {
-    const locations = groupedByStatus[status];
-    if (locations.length === 0) continue;
+    const encounters = groupedByStatus[status];
+    const tempId = id++;
 
-    let embed = new EmbedBuilder()
+    if (encounters.length == 0) continue;
+
+    // Generate image buffer
+    const imageBuffer = await generateBoxImageFromGroups(encounters);
+
+    // Create attachment
+    const attachment = new AttachmentBuilder(imageBuffer, { name: `img${tempId}.png` });
+
+    // Embed referencing the attachment
+    const embed = new EmbedBuilder()
       .setTitle(titles[status])
-      .setColor(colors[status]);
+      .setColor(colors[status])
+      .setImage(`attachment://img${tempId}.png`);
 
-    const lines = players.map(player => `[ ${player.padEnd(pkmnNameLen + pkmnNickLen + 3)} ]`);
-    const playerHeader = `\`${lines.join(" - ")}\``;
-
-    embed.addFields({ name: `Players`, value: playerHeader });
-
-    let embedCharCount = playerHeader.length + titles[status].length;
-
-    for (const locationGroup of locations) {
-      const lines = players.map(player => {
-        const pkmn = locationGroup.encounters.find(enc => enc.player == player);
-        if (!pkmn) return `[ ${'Pokemon not found.'.padEnd(pkmnNameLen + pkmnNickLen + 3)} ]`;
-        return `[ ${pkmn.nickname.padEnd(pkmnNickLen)} ${`(${capitalize(pkmn.pokemon)})`.padEnd(pkmnNameLen + 2)} ]`;
-      });
-
-      const locationTitle = `📍 ${locationGroup.location}${locationGroup.status === "defeated" ? ` - ${locationGroup.reason}` : ''}`;
-      const valueText = `\`${lines.join(" - ")}\``;
-
-      if (valueText.length > MAX_EMBED_FIELD_VALUE) {
-        // Split valueText into chunks
-        const chunks = [];
-        let temp = '';
-        for (const line of lines) {
-          const chunkLine = `[ ${line} ] - `;
-          if ((temp + chunkLine).length > MAX_EMBED_FIELD_VALUE) {
-            chunks.push(temp);
-            temp = chunkLine;
-          } else {
-            temp += chunkLine;
-          }
-        }
-        if (temp) chunks.push(temp);
-
-        for (let i = 0; i < chunks.length; i++) {
-          embed.addFields({
-            name: i === 0 ? locationTitle : `${locationTitle} (cont.)`,
-            value: `\`${chunks[i]}\``
-          });
-          embedCharCount += chunks[i].length;
-        }
-      } else {
-        embed.addFields({
-          name: locationTitle,
-          value: valueText
-        });
-        embedCharCount += valueText.length;
-      }
-
-      // If embed gets too large, push and start new
-      if (embedCharCount > MAX_TOTAL_MESSAGE_CHARS || embed.data.fields.length >= 25) {
-        currentEmbeds.push(embed);
-        embed = new EmbedBuilder().setColor(colors[status]);
-        embedCharCount = 0;
-
-        if (currentEmbeds.length === MAX_EMBEDS_PER_MESSAGE) {
-          await sendEmbeds();
-        }
-      }
-    }
-
-    currentEmbeds.push(embed);
-    if (currentEmbeds.length === MAX_EMBEDS_PER_MESSAGE) {
-      await sendEmbeds();
-    }
+    embeds.push(embed);
+    attachments.push(attachment);
   }
 
-  // Final footer embed
-  currentEmbeds.push(
-    new EmbedBuilder()
-      .setColor("DarkGold")
-      .setTimestamp()
-      .setFooter({ text: "Soullink overview powered by your BananenMan" })
-  );
-
-  await sendEmbeds();
+  await interaction.editReply({
+    embeds: embeds,
+    files: attachments
+  });
 }
 
 /**
@@ -1012,9 +913,13 @@ async function handleCreateRun(interaction) {
     });
   }
 
+  /** @type {Run} */
   const run = {
     runname,
-    players: [],
+    players: [{
+      id: interaction.user.id,
+      username: interaction.user.globalName
+    }],
     encounters: [],
     encounterCounter: 1,
     started: false,

@@ -52,12 +52,12 @@ export const commandBase = {
     if (buffer) chunks.push(buffer);
 
     await interaction.editReply({
-      content: "```ansi\n" + chunks[0] + "```",
+      content: "```\n" + chunks[0] + "```",
     });
 
     for (let i = 1; i < chunks.length; i++) {
       await interaction.followUp({
-        content: "```ansi\n" + chunks[i] + "```",
+        content: "```\n" + chunks[i] + "```",
         flags: "Ephemeral",
       });
     }
