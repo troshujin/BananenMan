@@ -719,7 +719,7 @@ async function handleOverview(interaction) {
       imageBuffer = await generateBoxImageFromGroups(encounters);
     } catch (error) {
       await interaction.editReply({
-        content: error
+        content: `I got an error :(`
       });
     }
 
