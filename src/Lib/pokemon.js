@@ -19,7 +19,7 @@ export async function getPokemonData(pokemonName) {
   let pkmnData = pokemon.find(p => p.name == pokemonName);
   if (pkmnData) return pkmnData;
 
-  if (pokemonName == "meowstic") {
+  if (pokemonName.toLowerCase() == "meowstic") {
     pkmnData = {
       id: 678,
       name: "meowstic",
