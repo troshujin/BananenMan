@@ -11,7 +11,7 @@ import {
   AttachmentBuilder,
 } from 'discord.js';
 import path from "path";
-import { getNextEvolution } from '../../Lib/pokemon.js';
+import { getNextEvolution } from `../../Lib/pokemon.js?update=${Date.now()}`;
 import { capitalize } from '../../Lib/utils.js';
 import { saveRun, loadRun } from '../../Lib/files.js';
 import { generateBoxImageFromGroups } from '../../Lib/image.js';
