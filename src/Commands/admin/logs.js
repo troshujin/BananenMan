@@ -57,7 +57,7 @@ export const commandBase = {
 
     for (let i = 1; i < chunks.length; i++) {
       await interaction.followUp({
-        content: "```\n" + chunks[i] + "```",
+        content: "```ansi\n" + chunks[i] + "```",
         flags: "Ephemeral",
       });
     }
