@@ -1,10 +1,7 @@
 import { Collection, Events, InteractionType, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
 import config from "../Base/config.js";
-import { pokemonNamesAsChoices } from "../Lib/pokemon.js";
-import fs from "fs/promises";
-import path from "path";
+import { pokemonNamesAsChoices, soullinkHandleButton } from "../Commands/fun/soullink.js";
 import { getRuns, getSettings, loadRun } from "../Lib/files.js";
-import { soullinkHandleButton } from "../Commands/fun/soullink.js";
 
 const cooldown = new Collection();
 
