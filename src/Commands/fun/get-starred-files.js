@@ -137,8 +137,6 @@ export const commandBase = {
 			const msg = messages[i];
 			if (msg.attachments.size !== 1) continue;
 
-			await interaction.editReply(`Checking:\n${msg.content}\n\n${i} / ${messages.length}`);
-
 			// Count stars and downs separately, ignoring bot reactions (-1)
 			let starsCount = -1;
 			let downsCount = -1;
