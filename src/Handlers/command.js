@@ -10,7 +10,6 @@ export default {
 
     // - Handlers -
     const commandFolders = readdirSync("./src/Commands");
-    const timestamp = Date.now();
 
     await Promise.all(
       commandFolders.map(async (category) => {
@@ -18,7 +17,7 @@ export default {
 
         await Promise.all(
           commandFiles.map(async (file) => {
-            const commands = await import(`../Commands/${category}/${file}?update=${timestamp}`);
+            const commands = await import(`../Commands/${category}/${file}`);
 
             if (commands) {
               if (commands.commandBase) {

@@ -22,7 +22,7 @@ export const commandBase = {
 		.addIntegerOption((option) =>
 			option
 				.setName("top")
-				.setDescription(`Amount of submissions to show; defaults to ${defaultLimit}`)
+				.setDescription(`Amount of submissions to show; defaults to ${defaultLimit}; -1 for all`)
 		),
 
 	cooldown: 15000,
@@ -45,6 +45,8 @@ export const commandBase = {
 			interaction.options.getChannel("channel") ?? interaction.channel;
 		const limit = interaction.options.getInteger("top") ?? defaultLimit;
 
+		const ignoreLimit = limit < 0
+
 		if (
 			!channel ||
 			!channel.isTextBased?.() ||
@@ -62,7 +64,7 @@ export const commandBase = {
 				?.has(PermissionsBitField.Flags.ReadMessageHistory)
 		) {
 			return await interaction.reply({
-				content: "I do not have permission to read message history in that channel.", 
+				content: "I do not have permission to read message history in that channel.",
 				flags: "Ephemeral",
 			});
 		}
@@ -78,25 +80,25 @@ export const commandBase = {
 
 			if (!hasReplied) {
 				await interaction.reply({
-					content: "Processing...", 
+					content: "Processing...",
 					flags: "Ephemeral",
 				});
 				hasReplied = true;
 			} else if (timeSpent > 2) {
 				await interaction.editReply({
-					content: "Request is taking a bit long...", 
+					content: "Request is taking a bit long...",
 					flags: "Ephemeral",
 				});
 				hasReplied = true;
 			} else if (sendUpdates && timeSpent - lastUpdate > 4) {
 				await interaction.followUp({
-					content: `Checked ${messages.length} messages so far... (${timeSpent.toFixed(1)}s)`, 
+					content: `Checked ${messages.length} messages so far... (${timeSpent.toFixed(1)}s)`,
 					flags: "Ephemeral",
 				});
 				lastUpdate = timeSpent;
 			} else if (!sendUpdates && timeSpent > 5) {
 				await interaction.followUp({
-					content: "This might take a while, I'll send progress updates.", 
+					content: "This might take a while, I'll send progress updates.",
 					flags: "Ephemeral",
 				});
 				sendUpdates = true;
@@ -121,36 +123,51 @@ export const commandBase = {
 		for (const msg of messages) {
 			if (msg.attachments.size !== 1) continue;
 
-			let starCount = msg.reactions.cache
-				.map((reaction) =>
-					reaction.emoji.name === star
-						? reaction.count
-						: reaction.emoji.name === down
-							? -reaction.count
-							: 0
-				)
-				.reduce((acc, val) => acc + val, 0);
+			// Count stars and downs separately, ignoring bot reactions
+			let starsCount = 0;
+			let downsCount = 0;
 
-			if (starCount < 1) continue;
+			for (const reaction of msg.reactions.cache.values()) {
+				const users = await reaction.users.fetch(); // fetch all users who reacted
+				const humanCount = users.filter((u) => !u.bot).size;
+
+				if (reaction.emoji.name === star) {
+					starsCount += humanCount;
+				} else if (reaction.emoji.name === down) {
+					downsCount += humanCount;
+				}
+			}
+
+			const netCount = starsCount - downsCount;
+			if (netCount < 1) continue;
 
 			const attachment = msg.attachments.first();
+
 			stars[msg.id] = {
-				count: starCount,
+				stars: starsCount,
+				downs: downsCount,
+				count: netCount,
 				fileName: attachment?.name ?? "Unknown file",
 				msgContent: msg.content?.slice(0, 100) ?? "(No text)",
 			};
+
 		}
 
+
 		const sorted = Object.entries(stars).sort((a, b) => b[1].count - a[1].count);
-		const contentList = sorted.slice(0, limit).map(([id, data], index) => {
+		let limitedList = sorted;
+		if (!ignoreLimit) limitedList = sorted.slice(0, limit);
+
+		const contentList = limitedList.map(([id, data], index) => {
 			const link = `https://discord.com/channels/${interaction.guildId}/${channel.id}/${id}`;
-			return `${index + 1}. [Link](${link}) — **${data.count}** ⭐ — ${data.fileName}\n> ${data.msgContent}`;
+			return `${index + 1}. [Link](${link}) — **${data.count}** ✨ — ${data.fileName} — ${data.stars} ⭐ / ${data.downs} ❌\n> ${data.msgContent}`;
 		});
 
 		if (contentList.length === 0) contentList.push("No starred files found 😔");
 
 		// Batch replies by 2000 character chunks
-		const header = `**Top ${limit} starred file(s)** (out of ${messages.length} messages in <#${channel.id}>):\n\n`;
+		const start = ignoreLimit ? `**Top` : `**Top ${limit}`
+		const header = `${start} starred file(s)** (out of ${messages.length} messages in <#${channel.id}>):\n\n`;
 		const contentBatches = [];
 		let batch = header;
 

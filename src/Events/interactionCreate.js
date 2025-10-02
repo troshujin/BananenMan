@@ -1,7 +1,8 @@
 import { Collection, Events, InteractionType, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
 import config from "../Base/config.js";
-import { pokemonNamesAsChoices, soullinkHandleButton } from "../Commands/fun/soullink.js";
+import { soullinkHandleButton } from "../Commands/fun/soullink.js";
 import { getRuns, getSettings, loadRun } from "../Lib/files.js";
+import { pokemonNamesAsChoices } from "../Lib/pokemon.js";
 
 const cooldown = new Collection();
 
@@ -44,9 +45,7 @@ export default {
           if (command.cooldown) {
             if (cooldown.has(`${command.name}-${interaction.user.id}`)) {
               const nowDate = interaction.createdTimestamp;
-              const waitedDate =
-                cooldown.get(`${command.name}-${interaction.user.id}`) -
-                nowDate;
+              const waitedDate = cooldown.get(`${command.name}-${interaction.user.id}`) - nowDate;
               return interaction
                 .reply({
                   content: `Cooldown is currently active, please try again <t:${Math.floor(
@@ -124,13 +123,23 @@ async function handleAutoComplete(interaction) {
     }
   }
 
-  if (focusedOption.name === "nickname") {
-    const runname = interaction.options.getString("runname")
+  console.log(focusedOption.name === "nickname", focusedOption.name === "newnickname")
+
+  if (focusedOption.name === "nickname" || focusedOption.name === "newnickname") {
+    const runname = interaction.options.getString("runname");
     if (runname) {
       const run = await loadRun(runname)
       if (run) {
-        const playerId = interaction.user.id;
-        const choices = [...new Set(run.encounters.filter(e => e.playerId == playerId).map(e => e.nickname))];
+        let choices = [...new Set(run.encounters.map(e => e.nickname))];
+
+        if (focusedOption.name === "newnickname") {
+          console.log("yay", choices)
+          const nickname = interaction.options.getString("nickname");
+          choices = choices.filter(n => n !== nickname);
+          console.log("yo", choices)
+
+        }
+
         const filtered = choices
           .filter(f => f.toLowerCase().includes(query.toLowerCase()))
           .slice(0, 25);

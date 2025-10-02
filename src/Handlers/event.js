@@ -3,11 +3,10 @@ import { readdirSync } from "node:fs";
 export default {
   async execute(client) {
     const eventFiles = readdirSync("./src/Events");
-    const timestamp = Date.now();
 
     Promise.all(
       eventFiles.map(async (file) => {
-        const event = await import(`../Events/${file}?update=${timestamp}`).then((x) => x.default);
+        const event = await import(`../Events/${file}`).then((x) => x.default);
         console.log(`[EventLoader] Event ${file}.`)
 
         if (event.once) {

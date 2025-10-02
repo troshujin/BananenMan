@@ -2,6 +2,8 @@ import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { botClient } from "../../Base/app.js";
 import { exec } from "child_process";
 import util from "util";
+import fs from "fs/promises";
+import config from "../../Base/config.js";
 const execAsync = util.promisify(exec);
 
 
@@ -32,9 +34,7 @@ export const commandBase = {
     try {
       const { stdout, stderr } = await execAsync(`git pull https://${process.env.GITHUB_USERNAME}:${process.env.GITHUB_TOKEN}@github.com/troshujin/BananenMan.git`);
 
-      if (stderr) {
-        console.error("Git stderr:", stderr);
-      }
+      if (stderr) { console.error("Git stderr:", stderr); }
       console.log("Git stdout:", stdout);
     } catch (error) {
       console.error("Git pull failed:", error);
@@ -50,7 +50,35 @@ export const commandBase = {
       return;
     }
 
-    await botClient.reconnect();
+    await fs.writeFile(
+      `${config.dataFolder}/.last-reload.json`,
+      JSON.stringify({ channelId: interaction.channelId }, null, 2)
+    );
+
+    try {
+      const { stdout, stderr } = await execAsync(`npm run restart`);
+
+      if (stderr) { console.error("Git stderr:", stderr); }
+      console.log("Git stdout:", stdout);
+    } catch (error) {
+      console.error("Restart failed:", error);
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("❌ Reload failed")
+            .setDescription(`Restart failed:\n\`\`\`${error.message}\`\`\``)
+            .setTimestamp()
+        ]
+      });
+      return;
+    }
+
+    
+    await fs.writeFile(
+      "./.last-reload.json",
+      JSON.stringify({ channelId: interaction.channelId }, null, 2)
+    );
 
     await interaction.editReply({
       embeds: [

@@ -4,7 +4,7 @@ import config from '../Base/config.js';
 import path from "path";
 
 const settingsFile = "settings"
-const soullinkDataFolder = "soullinkRunData"
+export const soullinkDataFolder = "soullinkRunData"
 
 /**
  * @returns {Promise<Settings>}

@@ -12,7 +12,10 @@ import {
 } from 'discord.js';
 import path from "path";
 import { capitalize } from '../../Lib/utils.js';
-import { saveRun, loadRun, getRuns } from '../../Lib/files.js';
+import { saveRun, loadRun, getRuns, getFilePath, soullinkDataFolder } from '../../Lib/files.js';
+import { getNextEvolution } from '../../Lib/pokemon.js';
+import { generateBoxImageFromGroups, singlePokemonGroup } from '../../Lib/image.js';
+
 
 const SOULLINK = {
   NAME: "soullink",
@@ -31,12 +34,13 @@ const SOULLINK = {
     ADD: "encounter",
     MOVE: "move",
     EVOLVE: "evolve",
+    EDIT: "edit",
   },
   INFO_SUBCOMMANDS: {
     SHOW: "view",
     LIST: "all",
     POKEMON: "pokemon",
-    ROUTE: "route",
+    FILE: "file",
   },
   MOVE_TO_TYPES: ["box", "team", "defeated"],
   ALL_TYPES: ["box", "team", "defeated", "missed"],
@@ -213,6 +217,58 @@ export const commandBase = {
                 .setAutocomplete(true)
             )
         )
+        .addSubcommand((sub) =>
+          sub
+            .setName(SOULLINK.EDIT_SUBCOMMANDS.EDIT)
+            .setDescription("Edit encounter")
+            .addStringOption((opt) =>
+              opt
+                .setName("runname")
+                .setDescription("Run name")
+                .setRequired(true)
+                .setAutocomplete(true)
+            )
+            .addStringOption((opt) =>
+              opt
+                .setName("nickname")
+                .setDescription("The pokemon to be edited.")
+                .setRequired(true)
+                .setAutocomplete(true)
+            )
+            .addUserOption((opt) =>
+              opt
+                .setName("player")
+                .setDescription("The player whose pokemon needs to be edited.")
+                .setRequired(false)
+            )
+            .addStringOption((opt) =>
+              opt
+                .setName("location")
+                .setDescription("Where the pokemon was caught.")
+                .setRequired(false)
+                .setAutocomplete(true)
+            )
+            .addStringOption((opt) =>
+              opt
+                .setName("pokemon")
+                .setDescription("Encountered Pokémon.")
+                .setRequired(false)
+                .setAutocomplete(true)
+            )
+            .addBooleanOption((opt) =>
+              opt
+                .setName("captured")
+                .setDescription("Captured or not")
+                .setRequired(false)
+            )
+            .addStringOption((opt) =>
+              opt
+                .setName("newnickname")
+                .setDescription("New nickname")
+                .setRequired(false)
+                .setAutocomplete(true)
+            )
+        )
     )
     .addSubcommandGroup((group) =>
       group
@@ -248,19 +304,14 @@ export const commandBase = {
         )
         .addSubcommand(sub =>
           sub
-            .setName(SOULLINK.INFO_SUBCOMMANDS.ROUTE)
-            .setDescription("View all encounters from a route")
+            .setName(SOULLINK.INFO_SUBCOMMANDS.FILE)
+            .setDescription("Get the full run file")
             .addStringOption((opt) =>
               opt
                 .setName("runname")
                 .setDescription("Run name")
                 .setRequired(true)
                 .setAutocomplete(true)
-            )
-            .addStringOption(opt =>
-              opt
-                .setName("location")
-                .setDescription("The route/location").setRequired(true)
             )
         )
         .addSubcommand(sub =>
@@ -275,7 +326,11 @@ export const commandBase = {
                 .setAutocomplete(true)
             )
             .addStringOption(opt =>
-              opt.setName("nickname").setDescription("Pokémon nickname").setRequired(true)
+              opt
+                .setName("nickname")
+                .setDescription("Pokémon nickname")
+                .setRequired(true)
+                .setAutocomplete(true)
             )
         )
     ),
@@ -323,7 +378,8 @@ export const commandBase = {
         if (sub === SOULLINK.EDIT_SUBCOMMANDS.EVOLVE)
           return await handleEvolveEncounter(interaction, run);
 
-      case SOULLINK.SUBCOMMAND_GROUPS.MOVE:
+        if (sub === SOULLINK.EDIT_SUBCOMMANDS.EDIT)
+          return await handleEditPokemon(interaction, run);
 
       case SOULLINK.SUBCOMMAND_GROUPS.INFO:
         if (sub === SOULLINK.INFO_SUBCOMMANDS.SHOW)
@@ -332,8 +388,8 @@ export const commandBase = {
         if (sub === SOULLINK.INFO_SUBCOMMANDS.LIST)
           return await handleListRuns(interaction);
 
-        if (sub === SOULLINK.INFO_SUBCOMMANDS.ROUTE)
-          return await handleViewRoute(interaction);
+        if (sub === SOULLINK.INFO_SUBCOMMANDS.FILE)
+          return await handleGetFile(interaction);
 
         if (sub === SOULLINK.INFO_SUBCOMMANDS.POKEMON)
           return await handleViewPokemon(interaction);
@@ -350,38 +406,6 @@ export const commandBase = {
     }
   },
 };
-
-// End
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// --------------------------------------------------------- //
-//     ______                     __   _                     //
-//    / ____/__  __ ____   _____ / /_ (_)____   ____   _____ //
-//   / /_   / / / // __ \ / ___// __// // __ \ / __ \ / ___/ //
-//  / __/  / /_/ // / / // /__ / /_ / // /_/ // / / /(__  )  //
-// /_/     \__,_//_/ /_/ \___/ \__//_/ \____//_/ /_//____/   //
-//                                                           //
-// --------------------------------------------------------- //
 
 // End
 
@@ -727,6 +751,42 @@ async function handleEvolveEncounter(interaction, run) {
   });
 }
 
+/**
+ * @param {CommandInteraction} interaction
+ * @param {Run} run
+ */
+async function handleEditPokemon(interaction, run) {
+  const nickname = interaction.options.getString("nickname");
+
+  /** @type {import('discord.js').User} */
+  const player = interaction.options.getUser("player");
+
+  const location = interaction.options.getString("location");
+  const pokemon = interaction.options.getString("pokemon");
+  const captured = interaction.options.getBoolean("captured");
+  const newnickname = interaction.options.getString("newnickname");
+
+  const encounters = run.encounters.filter(e => e.nickname?.toLowerCase() === nickname.toLowerCase() && (!player || e.playerId === player.id));
+  if (encounters.length == 0) {
+    return await interaction.reply({
+      embeds: [new EmbedBuilder().setColor("Red").setDescription(`❌ No Pokémon found with nickname **${nickname}**.`)],
+      flags: "Ephemeral",
+    });
+  }
+
+  // await interaction.deferReply();
+
+  for (const e of encounters) {
+    if (location !== null) e.location = location;
+    if (pokemon !== null) e.pokemon = pokemon;
+    if (captured !== null) e.captured = captured;
+    if (newnickname !== null) e.nickname = newnickname;
+  }
+
+  await saveRun(run.runname, run);
+  await handleViewPokemon(interaction, { nickname: newnickname });
+}
+
 // End
 
 
@@ -959,9 +1019,8 @@ function formatEncounter(encounter) {
 /**
  * @param {CommandInteraction} interaction
  */
-async function handleViewRoute(interaction) {
+async function handleGetFile(interaction) {
   const runname = interaction.options.getString("runname");
-  const location = interaction.options.getString("location");
 
   const run = await loadRun(runname);
   if (!run) {
@@ -971,36 +1030,22 @@ async function handleViewRoute(interaction) {
     });
   }
 
-  const routeEncounters = run.encounters.filter(e => e.location.toLowerCase() === location.toLowerCase());
-
-  if (routeEncounters.length === 0) {
-    return await interaction.reply({
-      embeds: [new EmbedBuilder().setColor("Yellow").setDescription(`ℹ️ No encounters found for run **${runname}**.`)],
-    });
-  }
+  const filePath = getFilePath(runname, soullinkDataFolder);
+  const file = new AttachmentBuilder(filePath);
 
   const embed = new EmbedBuilder()
-    .setTitle(`🧭 Route Overview: ${location}`)
-    .setDescription(`${routeEncounters.length} encounter(s) found.`)
-    .setColor("Green");
+    .setTitle(`🧭 Full run data: ${runname}`);
 
-  for (const enc of routeEncounters) {
-    embed.addFields({
-      name: `${enc.playerName}'s Pokemon`,
-      value: formatEncounter(enc),
-      inline: true
-    });
-  }
-
-  return interaction.reply({ embeds: [embed] });
+  return interaction.reply({ embeds: [embed], files: [file] });
 }
 
 /**
  * @param {CommandInteraction} interaction
+ * @param {{ nickname?: string }} options
  */
-async function handleViewPokemon(interaction) {
+async function handleViewPokemon(interaction, options = {}) {
   const runname = interaction.options.getString("runname");
-  const nickname = interaction.options.getString("nickname");
+  const nickname = options.nickname ?? interaction.options.getString("nickname");
 
   const run = await loadRun(runname);
   if (!run) {
@@ -1018,57 +1063,8 @@ async function handleViewPokemon(interaction) {
     });
   }
 
-  await interaction.deferReply()
-
-  /** @type {GroupedEncounter} */
-  let groupedEncounter = {};
-  for (const e of encounters) {
-    if (!groupedEncounter.location) {
-      groupedEncounter = {
-        location: e.location,
-        status: e.status,
-        reason: e.reason,
-        nickname: e.nickname,
-        encounters: [],
-      };
-    }
-    groupedEncounter.encounters.push({
-      id: e.id,
-      player: e.playerName,
-      pokemon: e.pokemon,
-      captured: e.captured,
-    });
-  }
-
-  // Generate image buffer
-  let imageBuffer;
-  try {
-    imageBuffer = await singlePokemonGroup(groupedEncounter);
-  } catch (error) {
-    await interaction.editReply({
-      content: `I got an error :( ${error}`
-    });
-    throw error;
-  }
-
-  // Create attachment
-  const attachment = new AttachmentBuilder(imageBuffer, { name: `img.png` });
-
-  // Embed referencing the attachment
-  const embed = new EmbedBuilder()
-    .setTitle(`🔍 Pokémon Overview: ${nickname}`)
-    .setColor("Blue")
-    .setImage(`attachment://img.png`);
-
-  for (const enc of encounters) {
-    embed.addFields({
-      name: `${enc.playerName}'s Pokemon`,
-      value: formatEncounter(enc),
-      inline: true
-    });
-  }
-
-  return interaction.editReply({ embeds: [embed], files: [attachment] });
+  await interaction.deferReply();
+  await replyWithPokemonInfo(interaction, encounters, nickname);
 }
 
 // End
@@ -1256,486 +1252,68 @@ async function requireAuthorizedPlayer(runname, interaction, bypassNotStarted = 
 
 
 
-
-
-
-
-
-
-
-
-// ------------------------------------------------------------------- //
-//     ____          __                                        _       //
-//    / __ \ ____   / /__ ___   ____ ___   ____   ____        (_)_____ //
-//   / /_/ // __ \ / //_// _ \ / __ `__ \ / __ \ / __ \      / // ___/ //
-//  / ____// /_/ // ,<  /  __// / / / / // /_/ // / / /_    / /(__  )  //
-// /_/     \____//_/|_| \___//_/ /_/ /_/ \____//_/ /_/(_)__/ //____/   //
-//                                                     /___/           //
-// ------------------------------------------------------------------- //
-
-import globalState from "../../Base/state.js";
-
-const KEYS = {
-  pokemon: "pokemonList",
-  data: "pokemonData",
-}
+// ------------------------------------- //
+//     __  __       __                   //
+//    / / / /___   / /____   ___   _____ //
+//   / /_/ // _ \ / // __ \ / _ \ / ___/ //
+//  / __  //  __// // /_/ //  __// /     //
+// /_/ /_/ \___//_// .___/ \___//_/      //
+//                /_/                    //
+// ------------------------------------- //
 
 /**
- * @param {string} pokemonName 
- * @returns {Promise<Pokemon>}
+ * @param {CommandInteraction} interaction
+ * @param {Encounter[]} encounters
+ * @param {string} nickname
  */
-export async function getPokemonData(pokemonName) {
-  /** @type {Pokemon[]} */
-  let pokemon = globalState.getState(KEYS.data) ?? [];
-  if (pokemon.length == 0) {
-    await fetchAllPokemon();
-  }
-
-  let pkmnData = pokemon.find(p => p.name == pokemonName);
-  if (pkmnData) return pkmnData;
-
-  if (pokemonName.toLowerCase() == "meowstic") {
-    pkmnData = {
-      id: 678,
-      name: "meowstic",
-      types: [],
-      sprites: { front_default: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/678.png" },
-      height: -1,
-      weight: -1,
-      stats: {},
+async function replyWithPokemonInfo(interaction, encounters, nickname) {
+  /** @type {GroupedEncounter} */
+  let groupedEncounter = {};
+  for (const e of encounters) {
+    if (!groupedEncounter.location) {
+      groupedEncounter = {
+        location: e.location,
+        status: e.status,
+        reason: e.reason,
+        nickname: e.nickname,
+        encounters: [],
+      };
     }
-    return pkmnData
-  } else {
-    console.log(`[Pokemon] Fetching pokemon data: ${pokemonName}.`)
-    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonName}`);
-    if (!response.ok) throw new Error(`Pokémon ${pokemonName} not found`);
-    pkmnData = await response.json();
+    groupedEncounter.encounters.push({
+      id: e.id,
+      player: e.playerName,
+      pokemon: e.pokemon,
+      captured: e.captured,
+    });
   }
 
-  pokemon.push(pkmnData);
-  globalState.setState(KEYS.data, pokemon);
-
-  return pkmnData;
-}
-
-/**
- * @param {string} pokemonName 
- * @returns {Promise<string>}
- */
-export async function getPokemonSprite(pokemonName) {
-  let pokemon = await getPokemonData(pokemonName)
-
-  return pokemon.sprites.front_default;
-}
-
-/**
- * @param {string} pokemonName 
- * @returns {Promise<PokemonBulk[]>}
- */
-export async function fetchAllPokemon() {
-  let pokemon = globalState.getState(KEYS.pokemon) ?? [];
-  if (pokemon.length != 0) return pokemon;
-
-  console.log("[Pokemon] Fetching pokemon.")
-  let response;
+  // Generate image buffer
+  let imageBuffer;
   try {
-    response = await fetch("https://pokeapi.co/api/v2/pokemon?limit=100000&offset=0");
+    imageBuffer = await singlePokemonGroup(groupedEncounter);
   } catch (error) {
-    console.error(error)
-    return [];
-  }
-  pokemon = (await response.json()).results;
-  globalState.setState(KEYS.pokemon, pokemon);
-
-  return pokemon;
-}
-
-/**
- * @returns {Promise<{name: string, value: string}[]>}
- */
-export async function pokemonNamesAsChoices() {
-  const list = await fetchAllPokemon();
-  return list.map(p => ({ name: p.name, value: p.name }));
-}
-
-/**
- * @param {string} pokemonName 
- * @returns {Promise<string[]>}
- */
-export async function getEvolutionChain(pokemonName) {
-  const speciesRes = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${pokemonName}`);
-  const speciesData = await speciesRes.json();
-
-  const evoUrl = speciesData.evolution_chain.url;
-  const evoRes = await fetch(evoUrl);
-  const evoData = await evoRes.json();
-
-  const evolutions = [];
-  let current = evoData.chain;
-
-  // Traverse chain
-  while (current) {
-    evolutions.push(current.species.name);
-    current = current.evolves_to?.[0]; // assuming linear evolution
+    await interaction.editReply({
+      content: `I got an error :( ${error}`
+    });
+    throw error;
   }
 
-  return evolutions;
-}
+  // Create attachment
+  const attachment = new AttachmentBuilder(imageBuffer, { name: `img.png` });
 
-/**
- * @param {string} pokemonName 
- * @returns {Promise<string?>}
- */
-export async function getNextEvolution(pokemonName) {
-  const evolutions = await getEvolutionChain(pokemonName);
+  // Embed referencing the attachment
+  const embed = new EmbedBuilder()
+    .setTitle(`🔍 Pokémon Overview: ${nickname}`)
+    .setColor("Blue")
+    .setImage(`attachment://img.png`);
 
-  const index = evolutions.indexOf(pokemonName);
-
-  if (index < evolutions.length - 1)
-    return evolutions[index + 1];
-}
-
-// End
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ----------------------------------------------------- //
-//     ____                                     _        //
-//    /  _/____ ___   ____ _ ____ _ ___        (_)_____  //
-//    / / / __ `__ \ / __ `// __ `// _ \      / // ___/  //
-//  _/ / / / / / / // /_/ // /_/ //  __/_    / /(__  )   //
-// /___//_/ /_/ /_/ \__,_/ \__, / \___/(_)__/ //____/    //
-//                        /____/         /___/           //
-// ----------------------------------------------------- //
-
-
-import { createCanvas, loadImage, registerFont } from 'canvas';
-
-// registerFont('./src/assets/PressStart2p-Regular.ttf', { family: 'PressStart2P' });
-
-/**
- * @param {GroupedEncounter[]} groups
- * @returns {Promise<Buffer>}
- */
-async function generateBoxImageFromGroups(groups) {
-  const spriteSize = 64;
-  const scale = 4;
-  const spriteScale = 2;
-  const spacing = 10;
-  const cols = 4;
-
-  const rows = Math.ceil(groups.length / cols);
-
-  const boxSize = spriteSize * 2.8;
-  const canvasWidth = (boxSize * cols + spacing * (cols - 1)) * scale;
-  const canvasHeight = (boxSize + spacing) * rows * scale;
-
-  const actualSpriteSize = spriteSize * scale * spriteScale
-
-  const canvas = createCanvas(canvasWidth, canvasHeight);
-  const ctx = canvas.getContext('2d');
-
-  ctx.fillStyle = '#0B1A2E';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const radius = boxSize;
-
-  const globalRotationDegrees = 150;
-  const globalRotationRadians = globalRotationDegrees * (Math.PI / 180);
-
-  ctx.font = `bold ${8 * scale * spriteScale}px 'Courier New'`; // Slightly larger font for the header
-  for (let i = 0; i < groups.length; i++) {
-    const group = groups[i];
-
-    const offsetX = (boxSize + spacing) * (i % cols) * scale;
-    const offsetY = (boxSize + spacing) * Math.floor(i / cols) * scale;
-
-    const centerX = boxSize * scale / 2 + offsetX;
-    const centerY = boxSize * scale / 2 + offsetY;
-
-    drawPokeball(ctx, { topLeft: [offsetX, offsetY], bottomRight: [offsetX + boxSize * scale, offsetY + boxSize * scale] }, radius * scale * 4 / 5);
-
-    const pokemonCount = group.encounters.length;
-    ctx.fillText("#", centerX, centerY)
-
-    if (pokemonCount === 1) {
-      const encounter = group.encounters[0];
-      const { pokemon } = encounter;
-
-      const spriteUrl = await getPokemonSprite(pokemon);
-      const sprite = await loadImage(spriteUrl);
-
-      const spriteX = centerX - (actualSpriteSize) / 2;
-      const spriteY = centerY - (actualSpriteSize) / 2;
-
-      ctx.drawImage(sprite, spriteX, spriteY, actualSpriteSize, actualSpriteSize);
-    } else if (pokemonCount > 1) {
-      const angleStep = (2 * Math.PI) / pokemonCount;
-      const spritesToDraw = [];
-
-      for (let j = 0; j < pokemonCount; j++) {
-        const encounter = group.encounters[j];
-        const { pokemon } = encounter;
-
-        const spriteUrl = await getPokemonSprite(pokemon);
-        const sprite = await loadImage(spriteUrl);
-
-        const angle = (j * angleStep) + globalRotationRadians;
-
-        const spriteX = (centerX + radius * Math.cos(angle)) - (actualSpriteSize) / 2;
-        const spriteY = (centerY + radius * Math.sin(angle)) - (actualSpriteSize) / 2;
-
-        spritesToDraw.push({
-          sprite,
-          x: spriteX,
-          y: spriteY,
-          width: actualSpriteSize,
-          height: actualSpriteSize,
-        });
-      }
-
-      // Draw sprites in order so that lowest Y value is drawn last (on top)
-      spritesToDraw.sort((a, b) => a.y - b.y);
-
-      for (const spriteData of spritesToDraw) {
-        ctx.drawImage(spriteData.sprite, spriteData.x, spriteData.y, spriteData.width, spriteData.height);
-      }
-    }
-    // Measure actual text width
-    const textMetrics = ctx.measureText(group.nickname);
-    const textWidth = textMetrics.width;
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(group.nickname, centerX - textWidth / 2, offsetY + boxSize * scale);
+  for (const enc of encounters) {
+    embed.addFields({
+      name: `${enc.playerName}'s Pokemon`,
+      value: formatEncounter(enc),
+      inline: true
+    });
   }
 
-  return canvas.toBuffer('image/png');
-}
-
-/**
- * @param {GroupedEncounter} group
- * @returns {Promise<Buffer>}
- */
-async function singlePokemonGroup(group) {
-  const boxSize = 64;
-  const scale = 4;
-  const radius = boxSize;
-
-  const centerX = boxSize * scale / 2;
-  const centerY = boxSize * scale / 2;
-  
-  const actualSpriteSize = boxSize * scale;
-
-  const canvas = createCanvas(boxSize * scale, boxSize * scale);
-  const ctx = canvas.getContext('2d');
-
-  ctx.fillStyle = '#0B1A2E';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  drawPokeball(ctx, { topLeft: [0, 0], bottomRight: [boxSize * scale, boxSize * scale] }, radius * scale * 4 / 5);
-
-  const pokemonCount = group.encounters.length;
-  ctx.fillText("#", centerX, centerY)
-
-  if (pokemonCount === 1) {
-    const encounter = group.encounters[0];
-    const { pokemon } = encounter;
-
-    const spriteUrl = await getPokemonSprite(pokemon);
-    const sprite = await loadImage(spriteUrl);
-
-    const spriteX = centerX - (actualSpriteSize) / 2;
-    const spriteY = centerY - (actualSpriteSize) / 2;
-
-    ctx.drawImage(sprite, spriteX, spriteY, actualSpriteSize, actualSpriteSize);
-  } else if (pokemonCount > 1) {
-    const angleStep = (2 * Math.PI) / pokemonCount;
-    const spritesToDraw = [];
-
-    const globalRotationDegrees = 150;
-    const globalRotationRadians = globalRotationDegrees * (Math.PI / 180);
-
-    for (let j = 0; j < pokemonCount; j++) {
-      const encounter = group.encounters[j];
-      const { pokemon } = encounter;
-
-      const spriteUrl = await getPokemonSprite(pokemon);
-      const sprite = await loadImage(spriteUrl);
-
-      const angle = (j * angleStep) + globalRotationRadians;
-
-      const spriteX = (centerX + radius * Math.cos(angle)) - (actualSpriteSize) / 2;
-      const spriteY = (centerY + radius * Math.sin(angle)) - (actualSpriteSize) / 2;
-
-      spritesToDraw.push({
-        sprite,
-        x: spriteX,
-        y: spriteY,
-        width: actualSpriteSize,
-        height: actualSpriteSize,
-      });
-    }
-
-    // Draw sprites in order so that lowest Y value is drawn last (on top)
-    spritesToDraw.sort((a, b) => a.y - b.y);
-
-    for (const spriteData of spritesToDraw) {
-      ctx.drawImage(spriteData.sprite, spriteData.x, spriteData.y, spriteData.width, spriteData.height);
-    }
-  }
-  // Measure actual text width
-  const textMetrics = ctx.measureText(group.nickname);
-  const textWidth = textMetrics.width;
-
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillText(group.nickname, centerX - textWidth / 2, boxSize * scale);
-
-  return canvas.toBuffer('image/png');
-}
-
-/**
- * Helper to draw rounded rectangle
- */
-/**
- * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
- * @param {{topLeft: [number, number], bottomRight: [number, number]}} pos - X coordinate of the center
- * @param {number} size - Diameter of the large circle
- */
-function drawPokeball(ctx, pos, size) {
-  const radius = size / 2;
-
-  const bgBlue = '#0B1A2E';
-  const blue = "#1E3A5F";
-
-  const centerX = (pos.topLeft[0] + pos.bottomRight[0]) / 2;
-  const centerY = (pos.topLeft[1] + pos.bottomRight[1]) / 2;
-
-  const width = pos.bottomRight[0] - pos.topLeft[0];
-  const height = pos.bottomRight[1] - pos.topLeft[1];
-
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.fillStyle = blue;
-  ctx.fill();
-
-  ctx.fillStyle = bgBlue;
-  ctx.beginPath();
-  ctx.rect(pos.topLeft[0], pos.topLeft[1] + height * 9 / 20, width, height * 1 / 10)
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius * 2 / 5, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.fillStyle = bgBlue;
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius * 1 / 5, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.fillStyle = blue;
-  ctx.fill();
-}
-
-
-
-
-function drawRuler(ctx, canvasWidth, canvasHeight, options = {}) {
-  // drawRuler(ctx, canvas.width, canvas.height, {
-  //   spacing: 50,       // Major tick every 50 pixels
-  //   minorTickCount: 5, // 4 minor ticks between major ticks (total 5 segments)
-  //   lineColor: '#bbb', // Lighter lines
-  //   textColor: '#555', // Darker text
-  //   font: '12px Arial',
-  //   rulerSize: 25      // Slightly thicker ruler
-  // });
-
-  const {
-    spacing = 50,
-    minorTickCount = 5,
-    lineColor = '#999',
-    textColor = '#333',
-    font = '10px Arial',
-    rulerSize = 20
-  } = options;
-
-  ctx.save(); // Save the current state of the context
-
-  ctx.strokeStyle = lineColor;
-  ctx.fillStyle = textColor;
-  ctx.font = font;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'center';
-
-  // --- Draw Horizontal Ruler ---
-  for (let i = 0; i <= canvasWidth; i += spacing) {
-    // Major ticks
-    ctx.beginPath();
-    ctx.moveTo(i, 0);
-    ctx.lineTo(i, rulerSize);
-    ctx.stroke();
-
-    // Labels
-    if (i > 0) { // Don't label 0 twice if drawing vertical ruler too
-      ctx.fillText(i.toString(), i, rulerSize / 2);
-    }
-
-    // Minor ticks
-    for (let j = 1; j < minorTickCount; j++) {
-      const minorTickPos = i + (spacing / minorTickCount) * j;
-      if (minorTickPos < canvasWidth) {
-        ctx.beginPath();
-        ctx.moveTo(minorTickPos, 0);
-        ctx.lineTo(minorTickPos, rulerSize / 2); // Half length for minor ticks
-        ctx.stroke();
-      }
-    }
-  }
-
-  // --- Draw Vertical Ruler ---
-  // Adjust text alignment for vertical labels
-  ctx.textAlign = 'left';
-  for (let i = 0; i <= canvasHeight; i += spacing) {
-    // Major ticks
-    ctx.beginPath();
-    ctx.moveTo(0, i);
-    ctx.lineTo(rulerSize, i);
-    ctx.stroke();
-
-    // Labels
-    if (i > 0) {
-      ctx.fillText(i.toString(), rulerSize / 2, i);
-    }
-
-    for (let j = 1; j < minorTickCount; j++) {
-      const minorTickPos = i + (spacing / minorTickCount) * j;
-      if (minorTickPos < canvasHeight) {
-        ctx.beginPath();
-        ctx.moveTo(0, minorTickPos);
-        ctx.lineTo(rulerSize / 2, minorTickPos);
-        ctx.stroke();
-      }
-    }
-  }
-
-  ctx.restore();
+  return interaction.editReply({ embeds: [embed], files: [attachment] });
 }
