@@ -32,6 +32,13 @@ export async function saveSettings(newSettings) {
   await fs.writeFile(file, JSON.stringify(newSettings, null, 2), 'utf-8');
 }
 
+export async function getAdmins() {
+  const settings = await getSettings();
+  let adminList = settings.admin;
+  if (!adminList.some(x => x.id == config.defaultSettings.admin[0].id)) adminList = adminList.concat(config.defaultSettings.admin);
+  return adminList;
+}
+
 export async function saveRun(runname, data) {
   await ensureDataDir();
   const file = getFilePath(runname, soullinkDataFolder);

@@ -32,36 +32,28 @@ export default {
     command ||= client.commands.get(client.commandAliases.get(cmd));
 
     if (command) {
-      if (command.adminOnly && !config.owners.includes(message.author.id)) {
-        const settings = await getSettings();
-
-        if (!settings.admin.find(a => a.id == message.author.id)) {
-          return await message.reply({
-            embeds: [new EmbedBuilder()
-              .setTitle("Only **admins** can use this command.")
-              .setTimestamp()],
-            flags: "Ephemeral",
-          });
-        }
+      if (command.adminOnly && !getAdmins().some(x => x.id == message.author.id)) {
+        return await message.reply({
+          embeds: [new EmbedBuilder()
+            .setTitle("Only **admins** can use this command.")
+            .setTimestamp()],
+          flags: "Ephemeral",
+        });
       }
 
       if (command.cooldown) {
         if (cooldown.has(`${command.name}-${message.author.id}`)) {
           const nowDate = message.createdTimestamp;
-          const waitedDate =
-            cooldown.get(`${command.name}-${message.author.id}`) - nowDate;
-          return message
-            .reply({
-              content: `Cooldown is currently active, please try again <t:${Math.floor(
-                new Date(nowDate + waitedDate).getTime() / 1000
-              )}:R>.`,
-            })
+          const waitedDate = cooldown.get(`${command.name}-${message.author.id}`) - nowDate;
+          return message.reply({
+            content: `Cooldown is currently active, please try again <t:${Math.floor(
+              new Date(nowDate + waitedDate).getTime() / 1000
+            )}:R>.`,
+          })
             .then((msg) =>
               setTimeout(
                 () => msg.delete(),
-                cooldown.get(`${command.name}-${message.author.id}`) -
-                Date.now() +
-                1000
+                cooldown.get(`${command.name}-${message.author.id}`) - Date.now() + 1000
               )
             );
         }

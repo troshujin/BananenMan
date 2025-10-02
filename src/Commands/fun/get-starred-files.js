@@ -74,9 +74,16 @@ export const commandBase = {
 		let hasReplied = false;
 		let sendUpdates = false;
 		let lastUpdate = 0;
+		let timeSpent = 0;
+		let responseMessage = "";
+
+		async function appendReply(message) {
+			responseMessage += `\n${message}`
+			await interaction.editReply(responseMessage.trim());
+		}
 
 		while (true) {
-			const timeSpent = (Date.now() - startTime) / 1000;
+			timeSpent = (Date.now() - startTime) / 1000;
 
 			if (!hasReplied) {
 				await interaction.reply({
@@ -108,6 +115,7 @@ export const commandBase = {
 			const options = { limit: 100 };
 			if (lastMessageId) options.before = lastMessageId;
 
+			/** @type {import('discord.js').Collection<string, import('discord.js').Message>} */
 			const fetchedMessages = await channel.messages.fetch(options);
 			if (fetchedMessages.size === 0) break;
 
@@ -115,26 +123,31 @@ export const commandBase = {
 			lastMessageId = fetchedMessages.last().id;
 		}
 
+		await interaction.editReply({
+			content: `Received ${messages.length} messages (${timeSpent.toFixed(1)}s). Starting calculation.`,
+			flags: "Ephemeral",
+		});
+
 		const star = "⭐";
 		const down = "❌";
 
 		const stars = {};
 
-		for (const msg of messages) {
+		for (let i = 0; i < messages.length; i++) {
+			const msg = messages[i];
 			if (msg.attachments.size !== 1) continue;
 
-			// Count stars and downs separately, ignoring bot reactions
-			let starsCount = 0;
-			let downsCount = 0;
+			await interaction.editReply(`Checking:\n${msg.content}\n\n${i} / ${messages.length}`);
+
+			// Count stars and downs separately, ignoring bot reactions (-1)
+			let starsCount = -1;
+			let downsCount = -1;
 
 			for (const reaction of msg.reactions.cache.values()) {
-				const users = await reaction.users.fetch(); // fetch all users who reacted
-				const humanCount = users.filter((u) => !u.bot).size;
-
 				if (reaction.emoji.name === star) {
-					starsCount += humanCount;
+					starsCount += reaction.count;
 				} else if (reaction.emoji.name === down) {
-					downsCount += humanCount;
+					downsCount += reaction.count;
 				}
 			}
 
@@ -153,6 +166,7 @@ export const commandBase = {
 
 		}
 
+		await appendReply(`Found ${stars.length} files with ⭐'s`);
 
 		const sorted = Object.entries(stars).sort((a, b) => b[1].count - a[1].count);
 		let limitedList = sorted;
@@ -167,7 +181,7 @@ export const commandBase = {
 
 		// Batch replies by 2000 character chunks
 		const start = ignoreLimit ? `**Top` : `**Top ${limit}`
-		const header = `${start} starred file(s)** (out of ${messages.length} messages in <#${channel.id}>):\n\n`;
+		const header = `${start} starred file(s)** (out of ${messages.length} messages in <#${channel.id}>):\n-# Not including my own reactions\n`;
 		const contentBatches = [];
 		let batch = header;
 

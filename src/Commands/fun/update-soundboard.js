@@ -78,20 +78,17 @@ export const commandBase = {
     for (const msg of messages) {
       if (msg.attachments.size !== 1) continue;
 
-      // Count stars and downs separately, ignoring bot reactions
-      let starsCount = 0;
-      let downsCount = 0;
+      // Count stars and downs separately, ignoring bot reactions (-1)
+      let starsCount = -1;
+      let downsCount = -1;
 
-      for (const reaction of msg.reactions.cache.values()) {
-        const users = await reaction.users.fetch(); // fetch all users who reacted
-        const humanCount = users.filter((u) => !u.bot).size;
-
-        if (reaction.emoji.name === star) {
-          starsCount += humanCount;
-        } else if (reaction.emoji.name === down) {
-          downsCount += humanCount;
-        }
-      }
+			for (const reaction of msg.reactions.cache.values()) {
+				if (reaction.emoji.name === star) {
+					starsCount += reaction.count;
+				} else if (reaction.emoji.name === down) {
+					downsCount += reaction.count;
+				}
+			}
 
       const netCount = starsCount - downsCount;
       if (netCount < 1) continue;

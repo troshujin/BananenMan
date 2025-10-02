@@ -4,7 +4,7 @@ import {
   userMention,
   User,
 } from "discord.js";
-import { getSettings, saveSettings } from "../../Lib/files.js";
+import { getAdmins, getSettings, saveSettings } from "../../Lib/files.js";
 
 const SETTINGS = {
   NAME: "settings",
@@ -139,7 +139,7 @@ async function handleAdminAdd(interaction) {
     });
   }
 
-  settings.admin.push(user);
+  settings.admin.push({ id: user.id, username: user.username });
   await saveSettings(settings);
 
   const embed = new EmbedBuilder()
@@ -181,17 +181,17 @@ async function handleAdminRemove(interaction) {
  * @param {CommandInteraction} interaction
  */
 async function handleAdminList(interaction) {
-  const settings = await getSettings();
+  const adminList = await getAdmins();
 
   const embed = new EmbedBuilder()
     .setColor("Blue")
     .setTitle("👮 Admin List");
 
-  if (settings.admin.length === 0) {
+  if (adminList.length === 0) {
     embed.setDescription("No admins are currently set.");
   } else {
     embed.setDescription(
-      settings.admin.map(admin => `• ${userMention(admin.id)}`).join("\n")
+      adminList.map(admin => `• ${userMention(admin.id)}`).join("\n")
     );
   }
 
