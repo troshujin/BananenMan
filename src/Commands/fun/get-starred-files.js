@@ -150,7 +150,6 @@ export const commandBase = {
 			}
 
 			const netCount = starsCount - downsCount;
-			if (netCount < 1) continue;
 
 			const attachment = msg.attachments.first();
 
@@ -164,7 +163,7 @@ export const commandBase = {
 
 		}
 
-		await appendReply(`Found ${stars.length} files with ⭐'s`);
+		await appendReply(`Found ${Object.keys(stars).length} files with ⭐'s`);
 
 		const sorted = Object.entries(stars).sort((a, b) => b[1].count - a[1].count);
 		let limitedList = sorted;
@@ -172,7 +171,8 @@ export const commandBase = {
 
 		const contentList = limitedList.map(([id, data], index) => {
 			const link = `https://discord.com/channels/${interaction.guildId}/${channel.id}/${id}`;
-			return `${index + 1}. [Link](${link}) — **${data.count}** ✨ — ${data.fileName} — ${data.stars} ⭐ / ${data.downs} ❌\n> ${data.msgContent}`;
+			// \`${data.stars} ⭐ / ${data.downs} ❌\`
+			return `${index + 1}. [Link](${link}) — **${data.count}** ✨ — ${data.msgContent}`;
 		});
 
 		if (contentList.length === 0) contentList.push("No starred files found 😔");

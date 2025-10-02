@@ -123,8 +123,6 @@ async function handleAutoComplete(interaction) {
     }
   }
 
-  console.log(focusedOption.name === "nickname", focusedOption.name === "newnickname")
-
   if (focusedOption.name === "nickname" || focusedOption.name === "newnickname") {
     const runname = interaction.options.getString("runname");
     if (runname) {
@@ -133,11 +131,8 @@ async function handleAutoComplete(interaction) {
         let choices = [...new Set(run.encounters.map(e => e.nickname))];
 
         if (focusedOption.name === "newnickname") {
-          console.log("yay", choices)
           const nickname = interaction.options.getString("nickname");
           choices = choices.filter(n => n !== nickname);
-          console.log("yo", choices)
-
         }
 
         const filtered = choices

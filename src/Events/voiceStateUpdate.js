@@ -1,7 +1,7 @@
 import { Events } from 'discord.js';
 import globalState from "./../Base/state.js";
 
-const MUTE_LIMIT_MS = 1_200_000;
+const MUTE_LIMIT_MS = 20 * 60 * 1000;
 const KEYS = {
   isRunning: "afkKickerIsRunning",
   functionKey: "afkKickerFunction",
@@ -68,8 +68,6 @@ function checkMutedUsers() {
   /** @type {Map<string, mutedUsers>} */
   const mutedUsers = globalState.getState(KEYS.mutedUsers);
 
-  console.log(client)
-
   if (!client) {
     console.log("[Afk-Kicker] Client not set, cancelling.");
     globalState.setState(KEYS.isRunning, false);
@@ -98,9 +96,7 @@ function checkMutedUsers() {
       now - info.mutedAt >= MUTE_LIMIT_MS
     ) {
       member.voice.setChannel(afkChannel).catch(console.error);
-      console.log(
-        `[AFK-Kicker] Moved ${member.user.tag} to AFK for being muted too long.`
-      );
+      console.log(`[AFK-Kicker] Moved ${member.user.tag} to AFK for being muted too long.`);
       mutedUsers.delete(userId);
     }
   }

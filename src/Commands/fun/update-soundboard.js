@@ -4,7 +4,6 @@ import {
   PermissionsBitField,
 } from "discord.js";
 
-const defaultLimit = 24;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 export const commandBase = {
@@ -91,7 +90,6 @@ export const commandBase = {
 			}
 
       const netCount = starsCount - downsCount;
-      if (netCount < 1) continue;
 
       const attachment = msg.attachments.first();
       if (attachment.size > MAX_FILE_SIZE) continue; // skip too large
