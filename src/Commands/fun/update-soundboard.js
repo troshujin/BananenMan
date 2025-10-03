@@ -68,7 +68,7 @@ export const commandBase = {
       messages.push(...fetched.values());
       lastMessageId = fetched.last().id;
     }
-    await appendReply(`📨 Collected ${messages.length} messages. \n🧮 scanning for ⭐...`);
+    await appendReply(`📨 Collected ${messages.length} messages. \n🧮 Scanning for stars...`);
 
     const stars = {};
     const star = "⭐";
@@ -138,7 +138,7 @@ export const commandBase = {
     // Step 3: Delete old sounds
     // ------------------------------
     let deleted = 0;
-    if (existingSounds.items.length) await appendReply(`\n🗑️ Deleting old sounds...`);
+    if (existingSounds.items.some(sound => !topStarred.some((s) => s.name === sound.name))) await appendReply(`\n🗑️ Deleting old sounds...`);
     for (const sound of existingSounds.items) {
       const keep = topStarred.some((s) => s.name === sound.name);
       if (!keep) {
