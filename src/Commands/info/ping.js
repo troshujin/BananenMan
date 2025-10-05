@@ -13,6 +13,6 @@ export const commandBase = {
     message.reply("Pong 🏓");
   },
   async slashRun(client, interaction) {
-    await interaction.reply(`Ponguuuuuu 🏓`);
+    await interaction.reply(`Pong 🏓`);
   },
 };
