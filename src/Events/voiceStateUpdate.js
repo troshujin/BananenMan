@@ -19,6 +19,7 @@ export default {
    * @param {import('discord.js').VoiceState} newState
    */
   execute(oldState, newState) {
+    return;
     if (newState.channelId === newState.guild.afkChannel?.id) return;
 
     const userId = newState.id;
