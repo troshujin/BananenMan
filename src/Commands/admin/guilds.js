@@ -5,10 +5,6 @@ import config from "../../Base/config.js";
 
 /** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
-  prefixData: {
-    name: "guilds",
-    aliases: ["guildlist"],
-  },
   slashData: new SlashCommandBuilder()
     .setName("guilds")
     .setDescription("List all guilds with stored settings or logs data."),

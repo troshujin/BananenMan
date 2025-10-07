@@ -50,10 +50,6 @@ const SOULLINK = {
 
 /** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
-  prefixData: {
-    name: "soullink",
-    aliases: [],
-  },
   slashData: new SlashCommandBuilder()
     .setName(SOULLINK.NAME)
     .setDescription("Pokemon Soullink!")

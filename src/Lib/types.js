@@ -1,7 +1,6 @@
 /**
  * @typedef {Object} CommandBase
- * @property {{name: string, aliases?: string[]}} prefixData - info for prefix command
- * @property {SlashCommandBuilder} slashData - info for slash command
+ * @property {import("discord.js").SlashCommandBuilder} slashData - info for slash command
  * @property {number} cooldown - cooldown in ms
  * @property {boolean} adminOnly - whether only admins can run
  * @property {boolean} ownerOnly - whether only owners can run

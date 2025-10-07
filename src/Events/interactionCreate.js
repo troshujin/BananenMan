@@ -55,9 +55,11 @@ export default {
           }
 
           if (command.cooldown) {
-            if (cooldown.has(`${command.prefixData.name}-${interaction.user.id}`)) {
+            console.log(command)
+            console.log(JSON.stringify(command))
+            if (cooldown.has(`${command.slashData.name}-${interaction.user.id}`)) {
               const nowDate = interaction.createdTimestamp;
-              const waitedDate = cooldown.get(`${command.prefixData.name}-${interaction.user.id}`) - nowDate;
+              const waitedDate = cooldown.get(`${command.slashData.name}-${interaction.user.id}`) - nowDate;
               return interaction
                 .reply({
                   content: `Cooldown is currently active, please try again <t:${Math.floor(new Date(nowDate + waitedDate).getTime() / 1000)}:R>.`,
@@ -66,18 +68,18 @@ export default {
                 .then(() =>
                   setTimeout(
                     () => interaction.deleteReply(),
-                    cooldown.get(`${command.prefixData.name}-${interaction.user.id}`) - Date.now() + 1000
+                    cooldown.get(`${command.slashData.name}-${interaction.user.id}`) - Date.now() + 1000
                   )
                 );
             }
 
             cooldown.set(
-              `${command.prefixData.name}-${interaction.user.id}`,
+              `${command.slashData.name}-${interaction.user.id}`,
               Date.now() + command.cooldown
             );
 
             setTimeout(() => {
-              cooldown.delete(`${command.prefixData.name}-${interaction.user.id}`);
+              cooldown.delete(`${command.slashData.name}-${interaction.user.id}`);
             }, command.cooldown + 1000);
           } 
           

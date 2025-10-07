@@ -5,10 +5,6 @@ import { CustomInteractionHandler } from "../../Lib/interaction.js";
 
 /** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
-  prefixData: {
-    name: "motd",
-    aliases: ["message-of-the-day"],
-  },
   slashData: new SlashCommandBuilder().setName("motd").setDescription("Message Of The Day!"),
   cooldown: 1000,
   adminOnly: false,

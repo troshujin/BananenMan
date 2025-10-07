@@ -19,10 +19,6 @@ const LEVEL_NAMES = {
 
 /** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
-  prefixData: {
-    name: "logs",
-    aliases: [],
-  },
   slashData: new SlashCommandBuilder()
     .setName("logs")
     .setDescription("View bot logs with optional filters.")

@@ -31,7 +31,6 @@ export default {
     }
 
     let command = client.commands.get(cmd);
-    command ||= client.commands.get(client.commandAliases.get(cmd));
 
     if (command) {
       if (command.adminOnly && !getAdmins().some(x => x.id == message.author.id)) {

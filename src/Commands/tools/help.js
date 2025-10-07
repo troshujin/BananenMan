@@ -64,8 +64,7 @@ export const commandBase = {
     if (commandName) {
       const command =
         handler.client.slashCommands.get(commandName) ||
-        handler.client.commands.get(commandName) ||
-        handler.client.commands.get(handler.client.commandAliases.get(commandName));
+        handler.client.commands.get(commandName);
 
       if (!command || !checkCommandPerms(command)) { //
         return handler.interaction.reply({
@@ -74,9 +73,8 @@ export const commandBase = {
         });
       }
 
-      const name = command.slashData?.name || command.prefixData?.name || commandName;
-      const description = command.slashData?.description || command.prefixData?.description;
-      const aliases = command.prefixData?.aliases?.join(", ") || "None";
+      const name = command.slashData?.name || commandName;
+      const description = command.slashData?.description;
 
       const subcommands = getSubcommands(command.slashData?.toJSON?.());
 
@@ -84,7 +82,6 @@ export const commandBase = {
         .setTitle(`Help: /${name}`)
         .addFields(
           { name: "Description", value: description || "No description" },
-          { name: "Aliases", value: aliases }
         )
         .setColor("Blue");
 

@@ -8,10 +8,6 @@ const execAsync = util.promisify(exec);
 
 /** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
-  prefixData: {
-    name: "reload",
-    aliases: [],
-  },
   slashData: new SlashCommandBuilder().setName("reload").setDescription("Disconnect and reconnect the bot. Reloads commands, events and handlers without losing state."),
   cooldown: 1000,
   ownerOnly: true,

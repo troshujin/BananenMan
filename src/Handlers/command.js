@@ -7,7 +7,6 @@ export default {
    */
   async execute(client) {
     client.commands = new Collection();
-    client.commandAliases = new Collection();
     client.slashCommands = new Collection();
     client.slashDatas = [];
 
@@ -23,30 +22,6 @@ export default {
             const commands = await import(`../Commands/${category}/${file}`);
 
             if (commands) {
-              if (commands.commandBase) {
-                if (commands.commandBase.prefixData) {
-                  // Prefix Command
-                  const prefixCommand = commands.commandBase;
-                  client.commands.set(
-                    prefixCommand.prefixData.name,
-                    prefixCommand
-                  );
-                  console.log(`[CommandLoader] Loaded prefix command: ${prefixCommand.prefixData.name}`)
-
-                  if (
-                    prefixCommand.prefixData.aliases &&
-                    Array.isArray(prefixCommand.prefixData.aliases)
-                  ) {
-                    prefixCommand.prefixData.aliases.forEach((alias) => {
-                      client.commandAliases.set(
-                        alias,
-                        prefixCommand.prefixData.name
-                      );
-                    });
-                  }
-                }
-              }
-
               if (commands.commandBase && commands.commandBase.slashData) {
                 // Slash Command
                 const slashCommand = commands.commandBase;

@@ -27,7 +27,6 @@ const SETTINGS = {
 
 /** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
-  prefixData: { name: "settings", aliases: [] },
   slashData: new SlashCommandBuilder()
     .setName(SETTINGS.NAME)
     .setDescription("View or update bot settings.")

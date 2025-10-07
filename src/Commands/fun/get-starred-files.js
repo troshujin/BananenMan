@@ -10,11 +10,6 @@ const defaultLimit = 24;
 
 /** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
-	prefixData: {
-		name: "get-starred-files",
-		aliases: [],
-	},
-
 	slashData: new SlashCommandBuilder()
 		.setName("get-starred-files")
 		.setDescription("Reads all submissions in a channel.")
