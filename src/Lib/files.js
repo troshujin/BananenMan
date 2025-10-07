@@ -44,7 +44,7 @@ export async function loadRun(runname) {
 export async function setLastChannelId(channelId) {
   await fs.writeFile(
     `${config.dataFolder}/.last-reload.json`,
-    JSON.stringify({ channelId: interaction.channelId }, null, 2)
+    JSON.stringify({ channelId: channelId }, null, 2)
   );
 }
 
