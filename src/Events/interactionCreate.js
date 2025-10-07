@@ -1,8 +1,8 @@
 import { Collection, Events, InteractionType, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
-import config from "../Base/config.js";
 import { soullinkHandleButton } from "../Commands/fun/soullink.js";
-import { getRuns, getSettings, loadRun } from "../Lib/files.js";
+import { getRuns, loadRun } from "../Lib/files.js";
 import { pokemonNamesAsChoices } from "../Lib/pokemon.js";
+import { CustomInteractionHandler } from "../Lib/interaction.js";
 
 const cooldown = new Collection();
 
@@ -21,61 +21,67 @@ export default {
     }
 
     const { client } = interaction;
+
     if (interaction.type === InteractionType.ApplicationCommand) {
       if (interaction.user.bot) {
         return;
       }
 
       try {
+        /** @type {import("../Lib/types.js").CommandBase} */
         const command = client.slashCommands.get(interaction.commandName);
-        if (command) {
-          if (command.adminOnly && !config.owners.includes(interaction.user.id)) {
-            const settings = await getSettings();
 
-            if (!settings.admin.find(a => a.id == interaction.user.id)) {
+        if (command) {
+          const handler = new CustomInteractionHandler(client, interaction, command);
+          const isOwner = await handler.checkIsOwner();
+          const isAdmin = await handler.checkIsAdmin();
+
+          if (command.ownerOnly && !isOwner) {
+            return await interaction.reply({
+              embeds: [new EmbedBuilder().setTitle("Only **bot owners** can use this command.").setTimestamp()],
+              flags: "Ephemeral",
+            });
+          }
+
+          if (command.adminOnly && !isOwner) {
+            if (!interaction.guild) throw new Error("interaction.guild not defined");
+
+            if (!isAdmin) {
               return await interaction.reply({
-                embeds: [new EmbedBuilder()
-                  .setTitle("Only **admins** can use this command.")
-                  .setTimestamp()],
+                embeds: [new EmbedBuilder().setTitle("Only **admins** can use this command.").setTimestamp()],
                 flags: "Ephemeral",
               });
             }
           }
 
           if (command.cooldown) {
-            if (cooldown.has(`${command.name}-${interaction.user.id}`)) {
+            if (cooldown.has(`${command.prefixData.name}-${interaction.user.id}`)) {
               const nowDate = interaction.createdTimestamp;
-              const waitedDate = cooldown.get(`${command.name}-${interaction.user.id}`) - nowDate;
+              const waitedDate = cooldown.get(`${command.prefixData.name}-${interaction.user.id}`) - nowDate;
               return interaction
                 .reply({
-                  content: `Cooldown is currently active, please try again <t:${Math.floor(
-                    new Date(nowDate + waitedDate).getTime() / 1000
-                  )}:R>.`,
+                  content: `Cooldown is currently active, please try again <t:${Math.floor(new Date(nowDate + waitedDate).getTime() / 1000)}:R>.`,
                   flags: "Ephemeral",
                 })
                 .then(() =>
                   setTimeout(
                     () => interaction.deleteReply(),
-                    cooldown.get(`${command.name}-${interaction.user.id}`) -
-                    Date.now() +
-                    1000
+                    cooldown.get(`${command.prefixData.name}-${interaction.user.id}`) - Date.now() + 1000
                   )
                 );
             }
 
-            command.slashRun(client, interaction);
-
             cooldown.set(
-              `${command.name}-${interaction.user.id}`,
+              `${command.prefixData.name}-${interaction.user.id}`,
               Date.now() + command.cooldown
             );
 
             setTimeout(() => {
-              cooldown.delete(`${command.name}-${interaction.user.id}`);
+              cooldown.delete(`${command.prefixData.name}-${interaction.user.id}`);
             }, command.cooldown + 1000);
-          } else {
-            command.slashRun(client, interaction);
-          }
+          } 
+          
+          await handler.execute();
         }
       } catch (e) {
         console.error(e);

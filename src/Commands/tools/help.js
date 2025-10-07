@@ -5,9 +5,11 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ComponentType,
-  InteractionResponseType
 } from "discord.js";
+import { CustomInteractionHandler } from "../../Lib/interaction.js";
 
+
+/** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
   slashData: new SlashCommandBuilder()
     .setName("help")
@@ -21,11 +23,20 @@ export const commandBase = {
     ),
 
   /**
-   * @param {import("discord.js").Client} client
-   * @param {import("discord.js").ChatInputCommandInteraction} interaction
+   * @param {CustomInteractionHandler} handler
+   * @returns {Promise<void>}
    */
-  async slashRun(client, interaction) {
-    const commandName = interaction.options.getString("command");
+  async slashRun(handler) {
+    const commandName = handler.interaction.options.getString("command");
+
+    const isAdmin = await handler.checkIsAdmin();
+    const isOwner = await handler.checkIsOwner();
+
+    function checkCommandPerms(command) {
+      if (command.ownerOnly) return isOwner;
+      if (command.adminOnly) return isOwner || isAdmin;
+      return true;
+    }
 
     const getSubcommands = (data) => {
       const subs = [];
@@ -52,12 +63,12 @@ export const commandBase = {
     // If specific command requested
     if (commandName) {
       const command =
-        client.slashCommands.get(commandName) ||
-        client.commands.get(commandName) ||
-        client.commands.get(client.commandAliases.get(commandName));
+        handler.client.slashCommands.get(commandName) ||
+        handler.client.commands.get(commandName) ||
+        handler.client.commands.get(handler.client.commandAliases.get(commandName));
 
-      if (!command) {
-        return interaction.reply({
+      if (!command || !checkCommandPerms(command)) { //
+        return handler.interaction.reply({
           content: `❌ Command \`${commandName}\` not found.`,
           flags: "Ephemeral",
         });
@@ -84,11 +95,12 @@ export const commandBase = {
         });
       }
 
-      return interaction.reply({ embeds: [embed], flags: "Ephemeral" });
+      return handler.interaction.reply({ embeds: [embed], flags: "Ephemeral" });
     }
 
     // Otherwise, list all commands
-    const allCommands = [...client.slashCommands.values()]
+    const allCommands = [...handler.client.slashCommands.values()]
+      .filter((cmd) => checkCommandPerms(cmd))
       .map((cmd) => {
         const json = cmd.slashData?.toJSON?.() ?? {};
         const subs = getSubcommands(json);
@@ -137,7 +149,7 @@ export const commandBase = {
 
     // You still need to call reply to send the initial message
     // However, the collector is created on the interaction itself for component interactions
-    await interaction.reply({
+    await handler.interaction.reply({
       embeds: [generateEmbed(currentPage)],
       components: [getActionRow()],
       flags: "Ephemeral",
@@ -146,8 +158,8 @@ export const commandBase = {
     });
 
     // Create the collector on the interaction itself
-    const collector = interaction.channel.createMessageComponentCollector({
-      filter: i => i.user.id === interaction.user.id, // Ensure only the original user can interact
+    const collector = handler.interaction.channel.createMessageComponentCollector({
+      filter: i => i.user.id === handler.interaction.user.id, // Ensure only the original user can interact
       componentType: ComponentType.Button,
       time: 60_000, // 1 minute
     });
@@ -165,7 +177,7 @@ export const commandBase = {
     collector.on("end", async () => {
       // Fetch the reply to edit its components after the collector ends
       // This is necessary because interaction.reply() doesn't return the Message object directly for collectors
-      const message = await interaction.fetchReply();
+      const message = await handler.interaction.fetchReply();
       if (message.editable) {
         message.edit({ components: [] }).catch(() => {});
       }

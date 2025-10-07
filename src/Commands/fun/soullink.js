@@ -15,6 +15,7 @@ import { capitalize } from '../../Lib/utils.js';
 import { saveRun, loadRun, getRuns, getFilePath, soullinkDataFolder } from '../../Lib/files.js';
 import { getNextEvolution } from '../../Lib/pokemon.js';
 import { generateBoxImageFromGroups, singlePokemonGroup } from '../../Lib/image.js';
+import { CustomInteractionHandler } from '../../Lib/interaction.js';
 
 
 const SOULLINK = {
@@ -46,6 +47,8 @@ const SOULLINK = {
   ALL_TYPES: ["box", "team", "defeated", "missed"],
 };
 
+
+/** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
   prefixData: {
     name: "soullink",
@@ -342,9 +345,11 @@ export const commandBase = {
   },
 
   /**
-   * @param {CommandInteraction} interaction
+   * @param {CustomInteractionHandler} handler
+   * @returns {Promise<void>}
    */
-  async slashRun(client, interaction) {
+  async slashRun(handler) {
+    const interaction = handler.interaction;
     const group = interaction.options.getSubcommandGroup(false);
     const sub = interaction.options.getSubcommand();
 

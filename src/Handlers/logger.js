@@ -1,6 +1,9 @@
 import winston from "winston";
 
 export default {
+  /**
+   * @param {import("discord.js").Client} client 
+   */
   async execute(client) {
     client.logger = winston.createLogger({
       level: "info",

@@ -1,5 +1,9 @@
 export default {
+  /**
+   * @param {import("discord.js").Client} client 
+   */
   execute(client) {
+    console.log("[error.js] Calling the error execute.")
     const handleError = (type, error) => {
       console.error(`${type}: ${error.stack || error.message}`);
     };

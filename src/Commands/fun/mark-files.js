@@ -1,5 +1,8 @@
 import { SlashCommandBuilder, ChannelType, PermissionsBitField } from "discord.js";
+import { CustomInteractionHandler } from "../../Lib/interaction.js";
 
+
+/** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
   slashData: new SlashCommandBuilder()
     .setName("mark-files")
@@ -13,12 +16,12 @@ export const commandBase = {
   cooldown: 30000,
   adminOnly: true,
 
-  async slashRun(client, interaction) {
-    await commandBase.execute(client, interaction);
-  },
-
-  async execute(client, interaction) {
-    const channel = interaction.options.getChannel("channel") ?? interaction.channel;
+  /**
+   * @param {CustomInteractionHandler} handler
+   * @returns {Promise<void>}
+   */
+  async slashRun(handler) {
+    const channel = handler.interaction.options.getChannel("channel") ?? handler.interaction.channel;
 
     if (
       !channel ||
@@ -26,23 +29,23 @@ export const commandBase = {
       !channel.viewable ||
       channel.type === ChannelType.Voice
     ) {
-      return interaction.reply("Please provide a valid text channel.");
+      return handler.interaction.reply("Please provide a valid text channel.");
     }
 
     if (
       !channel
-        .permissionsFor(interaction.client.user)
+        .permissionsFor(handler.interaction.client.user)
         ?.has(PermissionsBitField.Flags.ReadMessageHistory) ||
       !channel
-        .permissionsFor(interaction.client.user)
+        .permissionsFor(handler.interaction.client.user)
         ?.has(PermissionsBitField.Flags.AddReactions)
     ) {
-      return interaction.reply(
+      return handler.interaction.reply(
         "I need permission to read messages and add reactions in this channel."
       );
     }
 
-    await interaction.reply({ content: "Scanning messages for audio files…", ephemeral: true });
+    await handler.interaction.reply({ content: "Scanning messages for audio files…", ephemeral: true });
 
     let messages = [];
     let lastMessageId;
@@ -57,7 +60,7 @@ export const commandBase = {
 
       messages.push(...fetched.values());
       lastMessageId = fetched.last().id;
-      await interaction.editReply(`Scanning messages… (${messages.length} collected)`);
+      await handler.interaction.editReply(`Scanning messages… (${messages.length} collected)`);
     }
 
     let reacted = 0;
@@ -72,7 +75,7 @@ export const commandBase = {
       );
       if (botReacted) continue;
       
-      await interaction.editReply(`Reacting to: ${msg.content}`);
+      await handler.interaction.editReply(`Reacting to: ${msg.content}`);
 
       try {
         await msg.react("⭐");
@@ -83,6 +86,6 @@ export const commandBase = {
       }
     }
 
-    await interaction.editReply(`✅ Finished! Added ⭐ and ❌ to ${reacted} audio messages.`);
+    await handler.interaction.editReply(`✅ Finished! Added ⭐ and ❌ to ${reacted} audio messages.`);
   },
 };

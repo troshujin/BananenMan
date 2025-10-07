@@ -2,6 +2,9 @@ import { Collection } from "discord.js";
 import { readdirSync } from "node:fs";
 
 export default {
+  /**
+   * @param {import("discord.js").Client} client 
+   */
   async execute(client) {
     client.commands = new Collection();
     client.commandAliases = new Collection();

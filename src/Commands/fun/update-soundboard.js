@@ -3,9 +3,12 @@ import {
   ChannelType,
   PermissionsBitField,
 } from "discord.js";
+import { CustomInteractionHandler } from "../../Lib/interaction.js";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
+
+/** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
   slashData: new SlashCommandBuilder()
     .setName("update-soundboard")
@@ -19,8 +22,12 @@ export const commandBase = {
   cooldown: 60000,
   adminOnly: true,
 
-  async slashRun(client, interaction) {
-    await commandBase.execute(client, interaction);
+  /**
+   * @param {CustomInteractionHandler} handler
+   * @returns {Promise<void>}
+   */
+  async slashRun(handler) {
+    await commandBase.execute(handler.client, handler.interaction);
   },
 
   async execute(client, interaction) {

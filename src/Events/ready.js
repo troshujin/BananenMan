@@ -2,8 +2,7 @@ import { ActivityType, Events, Client, EmbedBuilder } from "discord.js";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v10";
 import globalState from "../Base/state.js";
-import fs from "fs/promises";
-import config from "../Base/config.js";
+import { getLastChannelId } from "../Lib/files.js";
 
 export default {
   name: Events.ClientReady,
@@ -36,8 +35,7 @@ export default {
     globalState.setState("client", client);
 
     try {
-      const data = await fs.readFile(`${config.dataFolder}/.last-reload.json`, "utf-8");
-      const { channelId } = JSON.parse(data);
+      const channelId = await getLastChannelId();
 
       const channel = await client.channels.fetch(channelId);
       if (!channel?.isTextBased()) return;
@@ -48,7 +46,7 @@ export default {
           new EmbedBuilder()
             .setColor("Blue")
             .setTitle("✅ Bot Reconnected")
-            .setDescription("Reload successful. I'm back online.")
+            .setDescription("Reload successful. I'm back online.\nYou may need to restart Discord (CTRL+R) to see some slash command updates.")
             .setTimestamp()
         ]
       });

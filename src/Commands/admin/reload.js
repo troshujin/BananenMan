@@ -1,12 +1,12 @@
-import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { botClient } from "../../Base/app.js";
+import { EmbedBuilder, IntentsBitField, SlashCommandBuilder } from "discord.js";
 import { exec } from "child_process";
 import util from "util";
-import fs from "fs/promises";
-import config from "../../Base/config.js";
+import { setLastChannelId } from "../../Lib/files.js";
+import { CustomInteractionHandler } from "../../Lib/interaction.js";
 const execAsync = util.promisify(exec);
 
 
+/** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
   prefixData: {
     name: "reload",
@@ -14,14 +14,14 @@ export const commandBase = {
   },
   slashData: new SlashCommandBuilder().setName("reload").setDescription("Disconnect and reconnect the bot. Reloads commands, events and handlers without losing state."),
   cooldown: 1000,
-  adminOnly: true,
+  ownerOnly: true,
 
   /**
-   * @param {import("discord.js").Client} client
-   * @param {import("discord.js").CommandInteraction} interaction
+   * @param {CustomInteractionHandler} handler
+   * @returns {Promise<void>}
    */
-  async slashRun(client, interaction) {
-    await interaction.reply({
+  async slashRun(handler) {
+    await handler.interaction.reply({
       embeds: [
         new EmbedBuilder()
           .setColor("Yellow")
@@ -38,7 +38,7 @@ export const commandBase = {
       console.log("Git stdout:", stdout);
     } catch (error) {
       console.error("Git pull failed:", error);
-      await interaction.editReply({
+      await handler.interaction.editReply({
         embeds: [
           new EmbedBuilder()
             .setColor("Red")
@@ -50,10 +50,17 @@ export const commandBase = {
       return;
     }
 
-    await fs.writeFile(
-      `${config.dataFolder}/.last-reload.json`,
-      JSON.stringify({ channelId: interaction.channelId }, null, 2)
-    );
+    await handler.interaction.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor("Green")
+          .setTitle("✅ Updated ✅")
+          .setDescription("Pulled latest code and started restarting!\nExpect a message from me to tell you I've succesfully restared.")
+          .setTimestamp()
+      ]
+    });
+
+    await setLastChannelId(handler.interaction.channelId);
 
     try {
       const { stdout, stderr } = await execAsync(`npm run restart`);
@@ -62,7 +69,7 @@ export const commandBase = {
       console.log("Git stdout:", stdout);
     } catch (error) {
       console.error("Restart failed:", error);
-      await interaction.editReply({
+      await handler.interaction.editReply({
         embeds: [
           new EmbedBuilder()
             .setColor("Red")
@@ -73,21 +80,5 @@ export const commandBase = {
       });
       return;
     }
-
-    
-    await fs.writeFile(
-      "./.last-reload.json",
-      JSON.stringify({ channelId: interaction.channelId }, null, 2)
-    );
-
-    await interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor("Green")
-          .setTitle("✅ Reloaded ✅")
-          .setDescription("Pulled latest code and reconnected.\nYou may need to restart Discord (CTRL+R) to see some slash command updates.")
-          .setTimestamp()
-      ]
-    });
   },
 };

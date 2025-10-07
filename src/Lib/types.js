@@ -1,8 +1,15 @@
-
-
+/**
+ * @typedef {Object} CommandBase
+ * @property {{name: string, aliases?: string[]}} prefixData - info for prefix command
+ * @property {SlashCommandBuilder} slashData - info for slash command
+ * @property {number} cooldown - cooldown in ms
+ * @property {boolean} adminOnly - whether only admins can run
+ * @property {boolean} ownerOnly - whether only owners can run
+ * @property {(client: import("discord.js").Client, interaction: import("discord.js").ChatInputCommandInteraction) => Promise<void>} slashRun
+ */
 
 /**
- * @typedef {Object} User
+ * @typedef {Object} ShortUser
  * @property {string} id - Discord user ID
  * @property {string} username - Discord username
  */
@@ -35,7 +42,7 @@
  * @property {string} runname
  * @property {boolean} started
  * @property {number} startedOn
- * @property {User[]} players
+ * @property {ShortUser[]} players
  * @property {Encounter[]} encounters
  * @property {number} encounterCounter
  */
@@ -43,7 +50,7 @@
 /**
  * @typedef {Object} Settings
  * @property {string} motd
- * @property {User[]} admin
+ * @property {ShortUser[]} admin
  */
 
 /**

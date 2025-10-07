@@ -1,6 +1,9 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
-import { getSettings } from "../../Lib/files.js";
+import { Settings } from "../../Lib/settings.js";
+import { CustomInteractionHandler } from "../../Lib/interaction.js";
 
+
+/** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
   prefixData: {
     name: "motd",
@@ -9,19 +12,16 @@ export const commandBase = {
   slashData: new SlashCommandBuilder().setName("motd").setDescription("Message Of The Day!"),
   cooldown: 1000,
   adminOnly: false,
-  async prefixRun(client, message, args) {
-    message.reply("Message");
-  },
 
   /**
-   * @param {import("discord.js").Client} client
-   * @param {import("discord.js").CommandInteraction} interaction
+   * @param {CustomInteractionHandler} handler
+   * @returns {Promise<void>}
    */
-  async slashRun(client, interaction) {
-    const settings = await getSettings();
-    const motd = settings.motd || "No MOTD set.";
+  async slashRun(handler) {
+    const settings = new Settings(handler.interaction.guildId);
+    const motd = await settings.get("motd") || "No MOTD set.";
 
-    return await interaction.reply({
+    return await handler.interaction.reply({
       embeds: [new EmbedBuilder()
         .setTitle("MOTD")
         .setDescription(motd)

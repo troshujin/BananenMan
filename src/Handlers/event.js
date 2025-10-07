@@ -1,6 +1,9 @@
 import { readdirSync } from "node:fs";
 
 export default {
+  /**
+   * @param {import("discord.js").Client} client 
+   */
   async execute(client) {
     const eventFiles = readdirSync("./src/Events");
 

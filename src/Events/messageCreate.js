@@ -1,10 +1,12 @@
-import { ChannelType, Collection, EmbedBuilder, Events } from "discord.js";
+import { ChannelType, Collection, EmbedBuilder, Events, Message } from "discord.js";
 import config from "../Base/config.js";
-import { getSettings } from "../Lib/files.js";
 const cooldown = new Collection();
 
 export default {
   name: Events.MessageCreate,
+  /**
+   * @param {import("discord.js").Message} message
+   */
   async execute(message) {
     const { client } = message;
 
@@ -13,7 +15,7 @@ export default {
     }
 
     if (message.channel.type === ChannelType.DM) {
-      return;
+      return await message.channel.send("Hi! I don't work in DM's. Thank you.");
     }
 
     const { prefix } = config;

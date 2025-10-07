@@ -1,4 +1,3 @@
-// settings.js
 import fs from "fs/promises";
 import config from '../Base/config.js';
 import path from "path";
@@ -6,38 +5,7 @@ import path from "path";
 const settingsFile = "settings"
 export const soullinkDataFolder = "soullinkRunData"
 
-/**
- * @returns {Promise<Settings>}
- */
-export async function getSettings() {
-  await ensureDataDir();
-  const file = getFilePath(settingsFile);
 
-  try {
-    const data = await fs.readFile(file, 'utf-8');
-    return JSON.parse(data);
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      await saveSettings(config.defaultSettings); // Save default settings
-      return config.defaultSettings;
-    } else {
-      throw err;
-    }
-  }
-}
-
-export async function saveSettings(newSettings) {
-  await ensureDataDir();
-  const file = getFilePath(settingsFile);
-  await fs.writeFile(file, JSON.stringify(newSettings, null, 2), 'utf-8');
-}
-
-export async function getAdmins() {
-  const settings = await getSettings();
-  let adminList = settings.admin;
-  if (!adminList.some(x => x.id == config.defaultSettings.admin[0].id)) adminList = adminList.concat(config.defaultSettings.admin);
-  return adminList;
-}
 
 export async function saveRun(runname, data) {
   await ensureDataDir();
@@ -70,4 +38,18 @@ export async function loadRun(runname) {
   } catch {
     return null;
   }
+}
+
+
+export async function setLastChannelId(channelId) {
+  await fs.writeFile(
+    `${config.dataFolder}/.last-reload.json`,
+    JSON.stringify({ channelId: interaction.channelId }, null, 2)
+  );
+}
+
+export async function getLastChannelId() {
+  const data = await fs.readFile(`${config.dataFolder}/.last-reload.json`, "utf-8")
+  const { channelId } = JSON.parse(data);
+  return channelId;
 }

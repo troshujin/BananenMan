@@ -3,17 +3,14 @@ dotenv.config();
 
 export default {
   prefix: "?",
-  owners: ["196606443703631874"],
+  owners: [
+    "196606443703631874", // troshujin
+    "265535215059861514", // piet323
+  ],
   token: process.env.BOT_TOKEN,
   dataFolder: "./data",
   defaultSettings: {
-    motd: "BananenMan is king!",
-    admin: [
-      {
-        id: "196606443703631874",
-        username: "Trojo"
-      }
-    ]
+    motd: "Purkachu is super cool!",
   }
 };
 

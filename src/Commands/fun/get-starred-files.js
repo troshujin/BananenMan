@@ -4,9 +4,11 @@ import {
 	PermissionsBitField,
 	CommandInteraction,
 } from 'discord.js';
+import { CustomInteractionHandler } from '../../Lib/interaction.js';
 
 const defaultLimit = 24;
 
+/** @type {import("../Lib/types.js").CommandBase} */
 export const commandBase = {
 	prefixData: {
 		name: "get-starred-files",
@@ -28,12 +30,12 @@ export const commandBase = {
 	cooldown: 15000,
 	adminOnly: false,
 
-	async prefixRun(client, message, args) {
-		message.reply("Nah, I only do it with the slash command.");
-	},
-
-	async slashRun(client, interaction) {
-		await commandBase.execute(interaction);
+  /**
+   * @param {CustomInteractionHandler} handler
+   * @returns {Promise<void>}
+   */
+  async slashRun(handler) {
+		await commandBase.execute(handler.interaction);
 	},
 
 	/**
