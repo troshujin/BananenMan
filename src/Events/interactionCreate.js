@@ -3,6 +3,7 @@ import { soullinkHandleButton } from "../Commands/fun/soullink.js";
 import { getRuns, loadRun } from "../Lib/files.js";
 import { pokemonNamesAsChoices } from "../Lib/pokemon.js";
 import { CustomInteractionHandler } from "../Lib/interaction.js";
+import globalState from "../Base/state.js";
 
 const cooldown = new Collection();
 
@@ -81,8 +82,8 @@ export default {
             setTimeout(() => {
               cooldown.delete(`${command.slashData.name}-${interaction.user.id}`);
             }, command.cooldown + 1000);
-          } 
-          
+          }
+
           await handler.execute();
         }
       } catch (e) {
@@ -176,6 +177,59 @@ async function handleAutoComplete(interaction) {
       filtered.map(p => ({ name: p.name, value: p.name }))
     );
   }
+
+  if (focusedOption.name === "message") {
+    const channel = interaction.channel;
+    const query = focusedOption.value.toLowerCase();
+
+    const cacheKey = `audioMsgs_${channel.id}`;
+    let messages = globalState.getCache(cacheKey);
+
+    // Cache miss → fetch once
+    if (!messages) {
+      console.log(`[Autocomplete] Cache miss for #${channel.name}`);
+      messages = [];
+      let lastMessageId;
+
+      while (true) {
+        console.log(`[Autocomplete] Fetching messages`)
+        const options = { limit: 100 };
+        if (lastMessageId) options.before = lastMessageId;
+
+        const fetched = await channel.messages.fetch(options);
+        if (fetched.size === 0) break;
+
+        messages.push(...fetched.values());
+        lastMessageId = fetched.last().id;
+
+        if (messages.length >= 500) break; // hard limit
+      }
+
+      globalState.setCache(cacheKey, messages);
+    }
+    console.log(`[Autocomplete] Filtering messages`)
+
+    const audioMessages = messages
+      .filter(m => m.attachments.some(a => a.contentType?.startsWith("audio/")))
+      .map(m => ({
+        name:
+          (m.content?.slice(0, 50) || aName(m)) ||
+          `Audio by ${m.author.username}`,
+        value: m.id,
+      }));
+
+    const filtered = audioMessages
+      .filter(c => c.name.toLowerCase().includes(query))
+      .slice(0, 25);
+
+    await interaction.respond(filtered);
+
+    function aName(m) {
+      const first = m.attachments.first();
+      return first ? first.name : "Unknown";
+    }
+  }
+
 }
 
 /**

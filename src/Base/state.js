@@ -1,23 +1,25 @@
 class StateTracker {
   constructor() {
+    /** @type {Map<string, any>} */
     this.states = new Map();
+
+    /** @type {Map<string, { value: any, expires: number }>} */
+    this.cache = new Map();
+
     /** @type {Map<string, Function>} */
     this.intervalFunctions = new Map();
+
     this.interval = undefined;
     this.intervalMs = 20_000;
   }
 
-  setIntervalMs(ms) {
-    this.intervalMs = ms;
-  }
-
+  // ========== State ==========
   setState(key, value) {
     this.states.set(key, value);
   }
 
   setStateIfNotSet(key, value) {
-    if (this.states.get(key)) return;
-    this.states.set(key, value);
+    if (!this.states.has(key)) this.states.set(key, value);
   }
 
   getState(key) {
@@ -28,14 +30,62 @@ class StateTracker {
     this.states.delete(key);
   }
 
+  // ========== Cache ==========
   /**
-   * @param {string} key 
-   * @param {Function} func 
+   * Set a cached value with optional TTL (ms)
+   * @param {string} key
+   * @param {any} value
+   * @param {number} [ttlMs=60000] - Defaults to 1 minute
    */
+  setCache(key, value, ttlMs = 60_000) {
+    const expires = Date.now() + ttlMs;
+    this.cache.set(key, { value, expires });
+  }
+
+  /**
+   * Get a cached value, returns null if expired or not found
+   * @param {string} key
+   */
+  getCache(key) {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expires) {
+      this.cache.delete(key);
+      return null;
+    }
+    return entry.value;
+  }
+
+  /**
+   * Delete a cached value
+   * @param {string} key
+   */
+  removeCache(key) {
+    this.cache.delete(key);
+  }
+
+  /**
+   * Clean expired cache entries (runs automatically via interval)
+   */
+  cleanCache() {
+    const now = Date.now();
+    for (const [key, { expires }] of this.cache.entries()) {
+      if (now > expires) this.cache.delete(key);
+    }
+  }
+
+  // ========== Interval Functions ==========
+  setIntervalMs(ms) {
+    this.intervalMs = ms;
+  }
+
   setIntervalFunction(key, func) {
     this.intervalFunctions.set(key, func);
+
     if (!this.interval) {
       this.interval = setInterval(() => {
+        this.cleanCache(); // cleanup cache every cycle
+
         if (this.intervalFunctions.size === 0) {
           clearInterval(this.interval);
           this.interval = undefined;
@@ -43,25 +93,20 @@ class StateTracker {
         }
 
         console.log(`[IntervalFunctions] Running ${this.intervalFunctions.size} functions.`);
-
         for (const [key, func] of this.intervalFunctions.entries()) {
-          console.log(`[IntervalFunctions] Running ${func.name}.`)
-          func()
+          console.log(`[IntervalFunctions] Running ${func.name}.`);
+          func();
         }
       }, this.intervalMs);
     }
   }
 
-  /**
-   * @param {string} key 
-   */
   removeIntervalFunction(key) {
     this.intervalFunctions.delete(key);
 
     if (this.intervalFunctions.size === 0) {
       clearInterval(this.interval);
       this.interval = undefined;
-      return;
     }
   }
 }

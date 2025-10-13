@@ -59,10 +59,39 @@ export const commandBase = {
     await setLastChannelId(handler.interaction.channelId);
 
     try {
+      const { stdout, stderr } = await execAsync(`npm i`);
+
+      if (stderr) { console.error("npm stderr:", stderr); }
+      console.log("npm stdout:", stdout);
+    } catch (error) {
+      console.error("npm i failed:", error);
+      await handler.interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor("Red")
+            .setTitle("❌ Updating node modules failed")
+            .setDescription(`npm i failed:\n\`\`\`${error.message}\`\`\``)
+            .setTimestamp()
+        ]
+      });
+      return;
+    }
+
+    await handler.interaction.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor("Green")
+          .setTitle("✅ Updated ✅")
+          .setDescription("Updated the node modules.")
+          .setTimestamp()
+      ]
+    });
+
+    try {
       const { stdout, stderr } = await execAsync(`npm run restart`);
 
-      if (stderr) { console.error("Git stderr:", stderr); }
-      console.log("Git stdout:", stdout);
+      if (stderr) { console.error("npm stderr:", stderr); }
+      console.log("npm stdout:", stdout);
     } catch (error) {
       console.error("Restart failed:", error);
       await handler.interaction.editReply({
