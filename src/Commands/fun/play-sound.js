@@ -153,6 +153,10 @@ async function playNext(guildId) {
   const { connection, player } = guildState;
   const next = guildState.queue.shift();
 
+  player.on('stateChange', (oldState, newState) => {
+    console.log(`[VoicePlayer] ${oldState.status} → ${newState.status}`);
+  });
+
   try {
     await entersState(connection, VoiceConnectionStatus.Ready, 10_000);
     const resource = createAudioResource(next.url);
