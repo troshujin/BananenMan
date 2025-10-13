@@ -24,11 +24,14 @@ export const commandBase = {
           .setTitle("⚠️ Reloading ⚠️")
           .setDescription("Pulling latest code and reconnecting...")
           .setTimestamp()
-      ]
+      ], flags: "Ephemeral"
     });
 
     try {
-      const { stdout, stderr } = await execAsync(`git pull https://${process.env.GITHUB_USERNAME}:${process.env.GITHUB_TOKEN}@github.com/troshujin/BananenMan.git`);
+      let { stdout, stderr } = await execAsync(`git pull https://${process.env.GITHUB_USERNAME}:${process.env.GITHUB_TOKEN}@github.com/troshujin/BananenMan.git`);
+
+      stdout = stdout.replaceAll(process.env.GITHUB_USERNAME, "[GITHUB_USERNAME]").replaceAll(process.env.GITHUB_TOKEN, "[GITHUB_TOKEN]");
+      stderr = stderr.replaceAll(process.env.GITHUB_USERNAME, "[GITHUB_USERNAME]").replaceAll(process.env.GITHUB_TOKEN, "[GITHUB_TOKEN]");
 
       if (stderr) { console.error("Git stderr:", stderr); }
       console.log("Git stdout:", stdout);
@@ -41,7 +44,7 @@ export const commandBase = {
             .setTitle("❌ Reload failed")
             .setDescription(`Git pull failed:\n\`\`\`${error.message}\`\`\``)
             .setTimestamp()
-        ]
+        ], flags: "Ephemeral"
       });
       return;
     }
@@ -53,7 +56,7 @@ export const commandBase = {
           .setTitle("✅ Updated ✅")
           .setDescription("Pulled latest code and started restarting!\nExpect a message from me to tell you I've succesfully restared.")
           .setTimestamp()
-      ]
+      ], flags: "Ephemeral"
     });
 
     await setLastChannelId(handler.interaction.channelId);
@@ -72,7 +75,7 @@ export const commandBase = {
             .setTitle("❌ Updating node modules failed")
             .setDescription(`npm i failed:\n\`\`\`${error.message}\`\`\``)
             .setTimestamp()
-        ]
+        ], flags: "Ephemeral"
       });
       return;
     }
@@ -84,7 +87,7 @@ export const commandBase = {
           .setTitle("✅ Updated ✅")
           .setDescription("Updated the node modules.")
           .setTimestamp()
-      ]
+      ], flags: "Ephemeral"
     });
 
     try {
@@ -101,7 +104,7 @@ export const commandBase = {
             .setTitle("❌ Reload failed")
             .setDescription(`Restart failed:\n\`\`\`${error.message}\`\`\``)
             .setTimestamp()
-        ]
+        ], flags: "Ephemeral"
       });
       return;
     }
