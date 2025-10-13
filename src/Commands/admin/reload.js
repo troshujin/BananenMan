@@ -3,6 +3,7 @@ import { exec } from "child_process";
 import util from "util";
 import { setLastChannelId } from "../../Lib/files.js";
 import { CustomInteractionHandler } from "../../Lib/interaction.js";
+import globalState from "../../Base/state.js";
 const execAsync = util.promisify(exec);
 
 
@@ -21,11 +22,15 @@ export const commandBase = {
       embeds: [
         new EmbedBuilder()
           .setColor("Yellow")
-          .setTitle("⚠️ Reloading ⚠️")
+          .setTitle("Reloading")
           .setDescription("Pulling latest code and reconnecting...")
           .setTimestamp()
       ], flags: "Ephemeral"
     });
+
+    console.log(globalState.isActive)
+    globalState.setInactive();
+    console.log(globalState.isActive)
 
     try {
       let { stdout, stderr } = await execAsync(`git pull https://${process.env.GITHUB_USERNAME}:${process.env.GITHUB_TOKEN}@github.com/troshujin/BananenMan.git`);
@@ -41,7 +46,7 @@ export const commandBase = {
         embeds: [
           new EmbedBuilder()
             .setColor("Red")
-            .setTitle("❌ Reload failed")
+            .setTitle("Reload failed")
             .setDescription(`Git pull failed:\n\`\`\`${error.message}\`\`\``)
             .setTimestamp()
         ], flags: "Ephemeral"
@@ -53,7 +58,7 @@ export const commandBase = {
       embeds: [
         new EmbedBuilder()
           .setColor("Green")
-          .setTitle("✅ Updated ✅")
+          .setTitle("Updated")
           .setDescription("Pulled latest code and started restarting!\nExpect a message from me to tell you I've succesfully restared.")
           .setTimestamp()
       ], flags: "Ephemeral"
@@ -72,7 +77,7 @@ export const commandBase = {
         embeds: [
           new EmbedBuilder()
             .setColor("Red")
-            .setTitle("❌ Updating node modules failed")
+            .setTitle("Updating node modules failed")
             .setDescription(`npm i failed:\n\`\`\`${error.message}\`\`\``)
             .setTimestamp()
         ], flags: "Ephemeral"
@@ -84,8 +89,18 @@ export const commandBase = {
       embeds: [
         new EmbedBuilder()
           .setColor("Green")
-          .setTitle("✅ Updated ✅")
+          .setTitle("Updated npm")
           .setDescription("Updated the node modules.")
+          .setTimestamp()
+      ], flags: "Ephemeral"
+    });
+
+    await handler.interaction.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor("Yellow")
+          .setTitle("Restarting bot...")
+          .setDescription("This may take a while..")
           .setTimestamp()
       ], flags: "Ephemeral"
     });
@@ -101,7 +116,7 @@ export const commandBase = {
         embeds: [
           new EmbedBuilder()
             .setColor("Red")
-            .setTitle("❌ Reload failed")
+            .setTitle("Reload failed")
             .setDescription(`Restart failed:\n\`\`\`${error.message}\`\`\``)
             .setTimestamp()
         ], flags: "Ephemeral"

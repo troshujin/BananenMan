@@ -16,9 +16,11 @@ export default {
   async execute(interaction) {
     if (interaction.isAutocomplete()) {
       await handleAutoComplete(interaction);
+      return
     }
     if (interaction.isButton()) {
       await handleButton(interaction);
+      return
     }
 
     const { client } = interaction;
@@ -185,27 +187,39 @@ async function handleAutoComplete(interaction) {
 
     // Cache miss → fetch once
     if (!messages) {
-      console.log(`[Autocomplete] Cache miss for #${channel.name}`);
+      await interaction.respond([{ name: "Loading...", value: "loading" }]);
+      console.log(`[AutoComplete] Cache miss for #${channel.name}`);
       messages = [];
-      let lastMessageId;
 
-      while (true) {
-        console.log(`[Autocomplete] Fetching messages`)
-        const options = { limit: 100 };
-        if (lastMessageId) options.before = lastMessageId;
+      // Then fetch in background to populate cache
+      const stateKey = `isFetchingMessages_${channel.name}`;
+      (async () => {
+        if (globalState.getState(stateKey)) return;
+        globalState.setState(stateKey, true);
 
-        const fetched = await channel.messages.fetch(options);
-        if (fetched.size === 0) break;
+        let lastMessageId;
+        const fetchedMessages = [];
 
-        messages.push(...fetched.values());
-        lastMessageId = fetched.last().id;
+        while (true) {
+          if (!globalState.isActive) break;
+          const options = { limit: 100 };
+          if (lastMessageId) options.before = lastMessageId;
+          
+          const fetched = await channel.messages.fetch(options);
+          if (fetched.size === 0) break;
 
-        if (messages.length >= 500) break; // hard limit
-      }
+          fetchedMessages.push(...fetched.values());
+          lastMessageId = fetched.last().id;
 
-      globalState.setCache(cacheKey, messages);
+          if (fetchedMessages.length >= 500) break;
+        }
+
+        globalState.setCache(cacheKey, fetchedMessages, 2 * 60 * 1000);
+        globalState.removeState(stateKey);
+      })();
+      return;
     }
-    console.log(`[Autocomplete] Filtering messages`)
+    console.log(`[AutoComplete] Filtering messages`)
 
     const audioMessages = messages
       .filter(m => m.attachments.some(a => a.contentType?.startsWith("audio/")))

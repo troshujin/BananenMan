@@ -9,7 +9,7 @@ import {
   VoiceConnectionStatus
 } from "@discordjs/voice";
 import globalState from "../../Base/state.js";
-import { checkIdleVoiceConnections } from "../../Lib/voiceCleanup.js";
+import { BOT_VOICE_ACTIVITY_KEY, BOT_VOICE_STATE_KEY, checkIdleVoiceConnections } from "../../Lib/voiceCleanup.js";
 
 /** @type {import("../../Lib/types.js").CommandBase} */
 export const commandBase = {
@@ -19,7 +19,7 @@ export const commandBase = {
     .addStringOption(opt =>
       opt
         .setName("message")
-        .setDescription("Message ID to play sound from")
+        .setDescription("Message link or ID to play sound from")
         .setAutocomplete(true)
         .setRequired(true)
     ),
@@ -47,10 +47,22 @@ export const commandBase = {
     // Try fetching the message
     let message;
     try {
-      const channel = interaction.channel;
-      message = await channel.messages.fetch(messageId);
+      let channel = interaction.channel;
+      let msgId = messageId;
+
+      // Detect full message URL
+      const urlMatch = messageId.match(
+        /https?:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)/
+      );
+      if (urlMatch) {
+        const [, guildId, channelIdFromUrl, messageIdFromUrl] = urlMatch;
+        channel = await interaction.client.channels.fetch(channelIdFromUrl);
+        msgId = messageIdFromUrl;
+      }
+
+      message = await channel.messages.fetch(msgId);
     } catch {
-      return interaction.editReply({ content: "❌ Could not find that message ID." });
+      return interaction.editReply({ content: "❌ Could not find that message ID or URL." });
     }
 
     const audioAttachment = message.attachments.find(a =>
@@ -61,7 +73,7 @@ export const commandBase = {
       return interaction.editReply({ content: "❌ Message has no audio attachment." });
     }
 
-    const guildKey = `vc_${interaction.guildId}`;
+    const guildKey = BOT_VOICE_STATE_KEY(interaction.guildId);
     const voiceChannel = member.voice.channel;
 
     // Get or create guild voice state
@@ -99,7 +111,7 @@ export const commandBase = {
         if (guildState.queue.length > 0) {
           // 1 second gap between tracks
           await new Promise(res => setTimeout(res, 200));
-          playNext(guildKey);
+          playNext(interaction.guildId);
         } else {
           guildState.playing = false;
         }
@@ -122,23 +134,17 @@ export const commandBase = {
     // If nothing playing, start playback
     if (!guildState.playing) {
       guildState.playing = true;
-      playNext(guildKey);
-    }
-
-    // Start monitor loop if not already running
-    if (!globalState.getState("soundMonitorRunning")) {
-      globalState.setState("soundMonitorRunning", true);
-      globalState.setIntervalFunction("soundMonitor", checkIdleVoiceConnections);
+      playNext(interaction.guildId);
     }
   },
 };
 
 /**
  * Plays the next sound in the queue for a guild.
- * @param {string} guildKey
+ * @param {string} guildId
  */
-async function playNext(guildKey) {
-  const guildState = globalState.getState(guildKey);
+async function playNext(guildId) {
+  const guildState = globalState.getState(BOT_VOICE_STATE_KEY(guildId));
   if (!guildState || guildState.queue.length === 0) {
     guildState.playing = false;
     return;
@@ -157,6 +163,8 @@ async function playNext(guildKey) {
       content: `🎵 Now playing: **${next.name}** in <#${next.channel.id}>.`,
       flags: "Ephemeral",
     });
+
+    globalState.setState(BOT_VOICE_ACTIVITY_KEY(guildId), Date.now())
   } catch (err) {
     console.error(`[PlaySound] Failed to play ${next.name}:`, err);
     await next.interaction.followUp({
@@ -164,6 +172,6 @@ async function playNext(guildKey) {
       flags: "Ephemeral",
     });
     // Continue to next in queue
-    playNext(guildKey);
+    playNext(guildId);
   }
 }

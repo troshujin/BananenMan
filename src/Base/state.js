@@ -10,7 +10,21 @@ class StateTracker {
     this.intervalFunctions = new Map();
 
     this.interval = undefined;
-    this.intervalMs = 20_000;
+    this.intervalMs = 5_000;
+
+    this.isActive = true;
+  }
+
+  setInactive() {
+    this.isActive = false;
+  }
+
+  /**
+   * 
+   * @returns {import("discord.js").Client}
+   */
+  getClient() {
+    return this.states.get("client");
   }
 
   // ========== State ==========
@@ -84,7 +98,7 @@ class StateTracker {
 
     if (!this.interval) {
       this.interval = setInterval(() => {
-        this.cleanCache(); // cleanup cache every cycle
+        this.cleanCache();
 
         if (this.intervalFunctions.size === 0) {
           clearInterval(this.interval);
@@ -94,7 +108,7 @@ class StateTracker {
 
         console.log(`[IntervalFunctions] Running ${this.intervalFunctions.size} functions.`);
         for (const [key, func] of this.intervalFunctions.entries()) {
-          console.log(`[IntervalFunctions] Running ${func.name}.`);
+          console.log(`[IntervalFunctions] Running ${key}.`);
           func();
         }
       }, this.intervalMs);

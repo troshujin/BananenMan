@@ -1,39 +1,32 @@
 // src/Events/voiceCleanup.js
 import globalState from "../Base/state.js";
 
-const MAX_IDLE_MS = 3 * 60 * 1000; // 3 minutes
+const MAX_IDLE_MS = 30 * 1000; // 30 seconds
 
-export default {
-  name: "soundCleanup",
-  once: false,
-};
+export const BOT_VOICE_ACTIVITY_KEY = (guildId) => `${guildId}_noiseMade`
+export const BOT_VOICE_STATE_KEY = (guildId) => `${guildId}_vcState`
 
-/**
- * This runs periodically via globalState.setIntervalFunction("soundMonitor", ...);
- */
-export function checkIdleVoiceConnections() {
+
+export function checkIdleVoiceConnections(guildId) {
   const now = Date.now();
+  
+  const noiseKey = BOT_VOICE_ACTIVITY_KEY(guildId);
+  const lastNoise = globalState.getState(noiseKey);
+  if (!lastNoise) return;
 
-  for (const [key, data] of globalState.states.entries()) {
-    if (!key.startsWith("vc_")) continue;
-    const { connection, lastPlayed } = data || {};
+  if (lastNoise < now + MAX_IDLE_MS) {
+    const key = BOT_VOICE_STATE_KEY(guildId)
+    const { connection, lastPlayed } = globalState.getState(key);
 
     if (connection && lastPlayed && now - lastPlayed > MAX_IDLE_MS) {
       try {
         connection.destroy();
-        console.log(`[VoiceCleanup] Disconnected idle VC for ${key}`);
+        console.log(`[VoiceCleanup] Disconnected idle VC for ${guildId}`);
       } catch (e) {
         console.error("[VoiceCleanup] Error while disconnecting:", e);
       }
+      globalState.removeState(noiseKey);
       globalState.removeState(key);
     }
-  }
-
-  // Stop loop if no voice connections left
-  const hasConnections = [...globalState.states.keys()].some(k => k.startsWith("vc_"));
-  if (!hasConnections) {
-    globalState.removeIntervalFunction("soundMonitor");
-    globalState.setState("soundMonitorRunning", false);
-    console.log("[VoiceCleanup] No active connections, monitor stopped.");
   }
 }
