@@ -156,7 +156,7 @@ async function playNext(guildId) {
   try {
     await entersState(connection, VoiceConnectionStatus.Ready, 10_000);
     const resource = createAudioResource(next.url);
-    console.log(`[PlaySound] Resource: ${audioAttachment.url}`);
+    console.log(`[PlaySound] Resource: ${next.url}`);
     player.play(resource);
     await entersState(player, AudioPlayerStatus.Playing, 5_000);
 
