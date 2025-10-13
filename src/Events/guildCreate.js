@@ -19,9 +19,9 @@ export default {
           permissions: [],
           reason: `Default ${botRoleName} for bot commands`,
         });
-        console.log(`Created role "${botRoleName}" in ${guild.name}`);
+        console.log(`[GuildCreate] Created role "${botRoleName}" in ${guild.name}`);
       } else {
-        console.log(`Role "${botRoleName}" already exists in ${guild.name}`);
+        console.log(`[GuildCreate] Role "${botRoleName}" already exists in ${guild.name}`);
       }
 
       // Save this role ID into your settings for the guild
@@ -29,7 +29,7 @@ export default {
       await settings.addAdminRole(role.id);
 
     } catch (err) {
-      console.error(`Failed to create role in ${guild.name}:`, err);
+      console.error(`[GuildCreate] Failed to create role in ${guild.name}:`, err);
     }
   },
 };
