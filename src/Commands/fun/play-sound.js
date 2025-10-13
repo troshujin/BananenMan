@@ -66,8 +66,6 @@ export const commandBase = {
 
     // Get or create guild voice state
     let guildState = globalState.getState(guildKey);
-    console.log(guildState)
-    if (guildState) console.log(guildState.queue)
     if (!guildState) {
       const connection = joinVoiceChannel({
         channelId: voiceChannel.id,

@@ -56,8 +56,6 @@ export default {
           }
 
           if (command.cooldown) {
-            console.log(command)
-            console.log(JSON.stringify(command))
             if (cooldown.has(`${command.slashData.name}-${interaction.user.id}`)) {
               const nowDate = interaction.createdTimestamp;
               const waitedDate = cooldown.get(`${command.slashData.name}-${interaction.user.id}`) - nowDate;
