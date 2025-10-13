@@ -7,7 +7,7 @@ const MUTE_LIMIT_MS = 20 * 60 * 1000; // 20 minutes
 // const MUTE_LIMIT_MS = 2000; // 2 seconds
 
 // Key prefixes
-const KEYS = {
+export const KEYS = {
   AFK_RUNNING: (guildId) => `${guildId}_afkKickerIsRunning`,
   AFK_INTERVAL: (guildId) => `${guildId}_afkKickerCheck`,
   AFK_MUTED: (guildId) => `${guildId}_afkKickerMutedUsers`,
@@ -116,16 +116,18 @@ function handleSoundMonitor(guild, newState, oldState) {
   const botId = guild.client.user?.id;
   if (!botId) return;
 
-  const wasInChannel = oldState.channelId && oldState.channel?.members.has(botId);
-  const isInChannel = newState.channelId && newState.channel?.members.has(botId);
+  const wasInChannel = (oldState.channelId && oldState.channel?.members.has(botId)) ?? false;
+  const isInChannel = (newState.channelId && newState.channel?.members.has(botId)) ?? false;
+
+  const isRunningKey = KEYS.SOUND_RUNNING(guild.id);
 
   // Bot joined a channel
-  if (!wasInChannel && isInChannel && !globalState.getState(KEYS.SOUND_RUNNING(guild.id))) {
+  if (!wasInChannel && isInChannel && !globalState.getState(isRunningKey)) {
     startSoundMonitor(guild.id);
   }
 
   // Bot left a channel
-  if (wasInChannel && !isInChannel && globalState.getState(KEYS.SOUND_RUNNING(guild.id))) {
+  if (!isInChannel && globalState.getState(isRunningKey)) {
     stopSoundMonitor(guild.id);
   }
 }
