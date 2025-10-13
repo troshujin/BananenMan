@@ -156,6 +156,7 @@ async function playNext(guildId) {
   try {
     await entersState(connection, VoiceConnectionStatus.Ready, 10_000);
     const resource = createAudioResource(next.url);
+    console.log(`[PlaySound] Resource: ${audioAttachment.url}`);
     player.play(resource);
     await entersState(player, AudioPlayerStatus.Playing, 5_000);
 
@@ -166,6 +167,7 @@ async function playNext(guildId) {
 
     globalState.setState(BOT_VOICE_ACTIVITY_KEY(guildId), Date.now())
   } catch (err) {
+    console.log("[PlaySound] Failed to start:", err);
     console.error(`[PlaySound] Failed to play ${next.name}:`, err);
     await next.interaction.followUp({
       content: `❌ Failed to play **${next.name}**.`,
